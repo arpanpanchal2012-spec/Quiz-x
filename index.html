@@ -1,0 +1,1078 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#513293" />
+    <title>Quizzes · Live learning, together</title>
+    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.5" />
+  </head>
+  <body>
+    <div class="app-shell" id="hostApp">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">Q</div>
+          <div><strong>Quizzes</strong><span>BETTER TOGETHER</span></div>
+        </div>
+        <nav class="nav" aria-label="Main navigation">
+          <button class="nav-item active" data-view="dashboard">
+            <span>⌂</span>Dashboard</button
+          ><button class="nav-item" data-view="quizzes">
+            <span>▤</span>My quizzes</button
+          ><button class="nav-item" data-view="reports">
+            <span>◒</span>Reports</button
+          ><button class="nav-item" data-view="settings">
+            <span>⚙</span>Settings
+          </button>
+        </nav>
+        <div class="sidebar-bottom">
+          <div class="help-card">
+            <div class="help-icon">♡</div>
+            <div>
+              <b>Made for your community</b>
+              <p>Private quizzes. Shared moments.</p>
+            </div>
+          </div>
+          <div class="profile">
+            <div class="avatar">QZ</div>
+            <div>
+              <b id="orgName">Your organization</b><small>Host workspace</small>
+            </div>
+          </div>
+        </div>
+      </aside>
+      <main class="main-content">
+        <header class="topbar">
+          <div class="mobile-brand">
+            <div class="brand-mark">Q</div>
+            <strong>Quizzes</strong>
+          </div>
+          <div class="top-actions">
+            <a class="text-btn" href="/join" target="_blank" rel="noopener"
+              >Join a game ↗</a
+            ><button class="secondary-btn" id="authButton">Host sign in</button>
+          </div>
+        </header>
+        <nav class="mobile-nav" aria-label="Mobile navigation">
+          <button data-view="dashboard">Home</button
+          ><button data-view="quizzes">Quizzes</button
+          ><button data-view="reports">Reports</button
+          ><button data-view="settings">Settings</button>
+        </nav>
+        <p id="workspacePrivacyNotice" class="workspace-privacy-notice" hidden>
+          Workspace access: other friends cannot see your content. The
+          designated site administrator can view and edit saved quizzes and
+          review results for oversight.
+        </p>
+        <section id="dashboard" class="view active-view">
+          <div class="welcome-row">
+            <div>
+              <div class="eyebrow" id="today">YOUR COMMUNITY WORKSPACE</div>
+              <h1>Good things happen together <span>✦</span></h1>
+              <p class="muted">
+                A little curiosity. A friendly challenge. A moment everyone can
+                share.
+              </p>
+            </div>
+            <div class="button-row">
+              <button class="secondary-btn" data-import>
+                ↑ Import questions</button
+              ><button class="primary-btn" data-new>＋ Create quiz</button>
+            </div>
+          </div>
+          <div class="hero-card">
+            <div class="hero-copy">
+              <span class="pill light">LIVE LEARNING, TOGETHER</span>
+              <h2>Your next great moment<br />starts with a question.</h2>
+              <p>
+                Launch a private quiz for your organization. Players join from
+                any device with a simple game code.
+              </p>
+              <button class="dark-btn" id="launchBtn">
+                Choose a quiz to host <span>↗</span>
+              </button>
+            </div>
+            <div class="hero-art" aria-hidden="true">
+              <div class="blob"></div>
+              <div class="floating-card card-one">
+                <span>PLAY TOGETHER</span><b>100</b
+                ><small>player limit per game</small>
+              </div>
+              <div class="floating-card card-two">
+                <b>Everyone</b><small>has a part to play</small>
+                <div class="mini-bars"><i></i><i></i><i></i><i></i><i></i></div>
+              </div>
+              <div class="question-art">
+                <div class="q-star">✦</div>
+                <b>What brings us<br />together?</b>
+                <div class="choice-row">
+                  <span>Our community</span><span class="check">✓</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="section-heading">
+            <div>
+              <h2>Your organization at a glance</h2>
+              <p class="muted">
+                Saved quizzes and completed sessions — no sample statistics.
+              </p>
+            </div>
+            <span class="pill">ALL TIME</span>
+          </div>
+          <div class="stats-grid" id="stats"></div>
+          <div class="lower-grid">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <h2>Ready for your next gathering</h2>
+                  <p class="muted">Pick up where you left off</p>
+                </div>
+                <button class="text-btn" data-view="quizzes">View all →</button>
+              </div>
+              <div id="recentQuizzes" class="quiz-list"></div>
+            </section>
+            <section class="panel">
+              <span class="pill">THE HOST CHECKLIST</span>
+              <h2 class="spaced">From idea to live game</h2>
+              <ol class="checklist">
+                <li>Build your rounds and questions.</li>
+                <li>Launch a room and share the join link.</li>
+                <li>Start each question when everyone is ready.</li>
+                <li>Celebrate the results together.</li>
+              </ol>
+              <p class="muted">
+                Players need only a nickname. Host access is password-protected.
+              </p>
+            </section>
+          </div>
+        </section>
+        <section id="quizzes" class="view">
+          <div class="page-title">
+            <div>
+              <div class="eyebrow">YOUR LIBRARY</div>
+              <h1>My quizzes</h1>
+              <p class="muted">
+                One quick round or a whole evening of discovery.
+              </p>
+            </div>
+            <div class="button-row">
+              <button class="secondary-btn" data-import>
+                ↑ Import questions</button
+              ><button class="primary-btn" data-new>＋ Create quiz</button>
+            </div>
+          </div>
+          <div class="studio-recovery-strip">
+            <span
+              >Private workspace · Saved quizzes stay separate from recovery
+              drafts.</span
+            ><button id="recoverDrafts" class="secondary-btn">
+              Recover drafts
+            </button>
+          </div>
+          <div class="library-grid" id="library"></div>
+          <section class="panel publications-panel">
+            <div class="page-title">
+              <div>
+                <h2>Published quizzes</h2>
+                <p class="muted">
+                  Participants play independently. One attempt per browser;
+                  correct answers appear after each submission, with a
+                  leaderboard after finishing.
+                </p>
+              </div>
+              <button id="refreshPublications" class="secondary-btn">
+                Refresh publications
+              </button>
+            </div>
+            <div id="publicationList"></div>
+          </section>
+        </section>
+        <section id="editor" class="view">
+          <form id="editorForm" novalidate>
+            <div class="page-title">
+              <div>
+                <div class="eyebrow">QUIZ STUDIO</div>
+                <h1 id="editorHeading">Create a quiz</h1>
+                <p class="muted" id="editorSaveDescription">
+                  Saved to your organization’s database when you select Save.
+                </p>
+              </div>
+              <div class="button-row">
+                <button
+                  type="button"
+                  class="secondary-btn"
+                  id="studioUndo"
+                  disabled
+                  title="Undo (Ctrl/Cmd+Z)"
+                >
+                  ↶ Undo</button
+                ><button
+                  type="button"
+                  class="secondary-btn"
+                  id="studioRedo"
+                  disabled
+                  title="Redo (Ctrl/Cmd+Shift+Z)"
+                >
+                  ↷ Redo</button
+                ><button type="button" class="secondary-btn" id="rehearseDraft">
+                  Preview &amp; test</button
+                ><button
+                  type="button"
+                  class="secondary-btn"
+                  id="openQuizSettings"
+                  aria-expanded="false"
+                >
+                  Quiz settings</button
+                ><button type="button" class="secondary-btn" id="cancelEdit">
+                  Back to library</button
+                ><button class="primary-btn" type="submit" id="saveQuiz">
+                  Save quiz
+                </button>
+              </div>
+            </div>
+            <p id="lastAdminEdit" class="muted" hidden></p>
+            <div
+              id="oversightEditorNotice"
+              class="studio-recovery-strip admin-edit-notice"
+              hidden
+            >
+              <strong id="oversightEditorLabel"></strong
+              ><button type="button" class="secondary-btn" id="backToOversight">
+                Back to admin oversight
+              </button>
+            </div>
+            <div class="studio-save-strip">
+              <span id="draftStatus" role="status"
+                >Recovery drafts are private. Save quiz makes changes
+                official.</span
+              ><button id="saveDraftCopy" type="button" class="text-btn">
+                Make a separate copy
+              </button>
+            </div>
+            <div
+              id="draftRecoveryPrompt"
+              class="studio-recovery-strip"
+              hidden
+            ></div>
+            <div id="importReview" class="import-review" hidden>
+              <h2>Review your imported quiz</h2>
+              <p id="importSummary"></p>
+              <ul id="importWarnings"></ul>
+              <details>
+                <summary>Compare with the extracted source</summary>
+                <pre id="importSource"></pre>
+              </details>
+              <label class="review-confirm"
+                ><input type="checkbox" id="importReviewed" disabled /> I have
+                checked every question and correct answer against the
+                document.</label
+              >
+            </div>
+            <details id="quizSettings" class="panel editor-basics" open>
+              <summary>Quiz settings · title, description & soundtrack</summary>
+              <label
+                >Quiz title<input
+                  id="quizTitle"
+                  maxlength="120"
+                  required
+                  placeholder="e.g. Volunteer appreciation" /></label
+              ><label
+                >Description<textarea
+                  id="quizDescription"
+                  maxlength="1000"
+                  placeholder="What will your community discover?"
+                ></textarea>
+              </label>
+              <div class="music-row">
+                <div>
+                  <label for="musicFile"
+                    >Custom background music · optional</label
+                  >
+                  <p class="muted">
+                    Default music plays automatically on host and player
+                    devices. Upload MP3, WAV or OGG (up to 10 MB) to replace it.
+                  </p>
+                  <input
+                    type="file"
+                    id="musicFile"
+                    accept="audio/mpeg,audio/wav,audio/ogg"
+                  />
+                </div>
+                <div id="musicPreview"></div>
+                <button type="button" class="text-btn" id="removeMusic">
+                  Remove music
+                </button>
+              </div>
+            </details>
+            <div class="studio-workspace">
+              <aside class="studio-rail">
+                <div class="rail-heading">
+                  QUESTIONS <span id="studioCount"></span>
+                </div>
+                <nav
+                  id="questionNavigator"
+                  aria-label="Question navigator"
+                ></nav>
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="studioAddQuestion"
+                >
+                  ＋ Add question</button
+                ><button type="button" class="outline-btn" id="addRound">
+                  ＋ Add round
+                </button>
+                <details class="studio-organize">
+                  <summary>Organize rounds</summary>
+                  <div class="round-tools panel">
+                    <b>Organize your rounds</b>
+                    <p class="muted">
+                      Select questions below, then move them together. Round
+                      names are optional. Empty rounds are omitted when saving.
+                    </p>
+                    <div class="button-row">
+                      <label
+                        >Move selected to
+                        <select id="bulkRound"></select></label
+                      ><button
+                        id="moveSelected"
+                        type="button"
+                        class="secondary-btn"
+                      >
+                        Move selected questions
+                      </button>
+                    </div>
+                  </div>
+                </details>
+              </aside>
+              <div id="roundEditor"></div>
+            </div>
+            <p class="form-status" id="saveStatus" role="status"></p>
+          </form>
+        </section>
+        <section id="reports" class="view">
+          <div class="page-title">
+            <div>
+              <div class="eyebrow">SHARED ACHIEVEMENTS</div>
+              <h1>Reports</h1>
+              <p class="muted">
+                Real results from completed games, saved across restarts.
+              </p>
+            </div>
+            <div class="button-row">
+              <button class="secondary-btn" id="refreshReports">Refresh</button
+              ><button class="text-btn" id="clearReports" disabled>
+                Delete all saved reports
+              </button>
+            </div>
+          </div>
+          <div id="reportList"></div>
+        </section>
+        <section id="settings" class="view">
+          <div class="panel" id="oversightPanel" hidden>
+            <div class="button-row">
+              <h2>Admin oversight</h2>
+              <button class="secondary-btn" id="refreshOversight">
+                Refresh workspaces
+              </button>
+            </div>
+            <p class="muted">
+              Full Studio access to saved quizzes: view every question, answer
+              and attachment, edit and save to the owner’s workspace. Review
+              live and self-paced results. Deletion and hosting as another user
+              are not enabled. This does not show passwords, private
+              backup/recovery codes or a live screen recording.
+            </p>
+            <label
+              >Choose workspace<select id="oversightWorkspace"></select
+            ></label>
+            <div id="oversightContent"></div>
+          </div>
+          <div class="panel invite-panel">
+            <h2>Invite a friend</h2>
+            <p>
+              Friends have separate workspaces and cannot see each other’s
+              content. The designated site administrator can view and edit saved
+              quizzes and review results for oversight. Hosting and storage
+              quotas are shared.
+            </p>
+            <button class="primary-btn" id="createInvite">
+              Create private invitation
+            </button>
+            <p id="inviteStatus" role="status"></p>
+            <input
+              id="inviteLink"
+              readonly
+              hidden
+              aria-label="Private friend invitation link"
+            /><small
+              >One-use link · expires in 24 hours · send privately. There is no
+              public signup.</small
+            >
+          </div>
+          <div class="page-title">
+            <div>
+              <div class="eyebrow">WORKSPACE</div>
+              <h1>Settings</h1>
+              <p class="muted">A private home for your community’s quizzes.</p>
+            </div>
+          </div>
+          <div class="panel settings-panel">
+            <div class="setting-row">
+              <div class="setting-symbol">◉</div>
+              <div>
+                <b>Organization</b>
+                <p id="organizationSetting">
+                  Sign in to manage your workspace.
+                </p>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-symbol">♬</div>
+              <div>
+                <b>Images, audio & music</b>
+                <p>
+                  Default background music plays on host and player devices. Add
+                  your own soundtrack and question media in the quiz editor.
+                  Playback is started by the host or player.
+                </p>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-symbol">♢</div>
+              <div>
+                <b>Participant privacy</b>
+                <p>
+                  No participant accounts. Nicknames, answers and scores are
+                  stored in session reports. Media links can be viewed by anyone
+                  who has the link.
+                </p>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-symbol">⌁</div>
+              <div>
+                <b>Storage</b>
+                <p>
+                  <span id="storageSummary"
+                    >Sign in to check persistent storage.</span
+                  >
+                </p>
+              </div>
+            </div>
+          </div>
+          <form class="panel password-form" id="recoveryCodeForm">
+            <h2>Save an account recovery code</h2>
+            <p class="muted">
+              Download a one-time recovery code and keep it in your password
+              manager. It lets you reset a forgotten password without email.
+              Generating a new code invalidates the old one.
+            </p>
+            <label
+              >Confirm your password<input
+                name="password"
+                type="password"
+                required
+                maxlength="128"
+                autocomplete="current-password"
+            /></label>
+            <button type="submit" class="primary-btn">
+              Download recovery code
+            </button>
+            <p id="recoveryCodeStatus" class="form-status" role="status"></p>
+          </form>
+          <form class="panel password-form" id="backupForm">
+            <h2>Download a private backup</h2>
+            <p class="muted">
+              Includes saved quizzes, reports, uploaded media and account
+              hashes. Keep the ZIP private. Active rooms and login sessions are
+              not included. Pause editing and uploads during the backup.
+            </p>
+            <label
+              >Confirm your password<input
+                name="password"
+                type="password"
+                required
+                maxlength="128"
+                autocomplete="current-password"
+            /></label>
+            <button type="submit" class="primary-btn">
+              Download backup ZIP
+            </button>
+            <p id="backupStatus" class="form-status" role="status"></p>
+          </form>
+          <form class="panel password-form" id="passwordForm">
+            <h2>Change host password</h2>
+            <label
+              >Current password<input
+                type="password"
+                name="oldPassword"
+                required
+                autocomplete="current-password" /></label
+            ><label
+              >New password<input
+                type="password"
+                name="password"
+                minlength="12"
+                maxlength="128"
+                required
+                autocomplete="new-password" /></label
+            ><button class="primary-btn" type="submit">
+              Update password & sign out
+            </button>
+            <p class="muted">
+              Use at least 12 characters. All host sessions and recovery codes
+              will be invalidated. Save a new recovery code after signing back
+              in.
+            </p>
+          </form>
+        </section>
+      </main>
+    </div>
+    <div
+      class="modal-backdrop"
+      id="authModal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="authTitle"
+    >
+      <form class="modal" id="authForm">
+        <button
+          class="modal-close"
+          type="button"
+          id="closeAuth"
+          aria-label="Close sign in"
+        >
+          ×
+        </button>
+        <div class="eyebrow">PRIVATE HOST WORKSPACE</div>
+        <h2 id="authTitle">Welcome back</h2>
+        <p class="muted" id="authNote">
+          Sign in to create quizzes and host your community.
+        </p>
+        <label id="orgField" hidden
+          >Organization name<input
+            id="organizationInput"
+            maxlength="120"
+            autocomplete="organization" /></label
+        ><label
+          >Email<input
+            id="emailInput"
+            type="email"
+            required
+            maxlength="254"
+            autocomplete="username" /></label
+        ><label
+          >Password<input
+            id="passwordInput"
+            type="password"
+            required
+            maxlength="128"
+            autocomplete="current-password"
+        /></label>
+        <p class="muted" id="openAppNote" hidden>
+          For private host sessions,
+          <a href="/" target="_blank" rel="noopener"
+            >open Quizzes in its own tab ↗</a
+          >.
+        </p>
+        <p class="form-status" id="authStatus" role="alert"></p>
+        <button class="primary-btn full-btn" type="submit" id="submitAuth">
+          Sign in</button
+        ><button class="text-btn full-btn" type="button" id="openRecovery">
+          Forgot password? Use a recovery code</button
+        ><a class="join-note" href="/join"
+          >Here to play? Join without an account →</a
+        >
+      </form>
+    </div>
+    <div
+      class="modal-backdrop"
+      id="recoverModal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="recoverTitle"
+    >
+      <form class="modal" id="recoverForm">
+        <button
+          type="button"
+          class="modal-close"
+          id="closeRecover"
+          aria-label="Close account recovery"
+        >
+          ×
+        </button>
+        <div class="eyebrow">ACCOUNT RECOVERY</div>
+        <h2 id="recoverTitle">Welcome back to your workspace</h2>
+        <p class="muted">
+          Use the one-time code you downloaded from Settings. If you lost both
+          the code and your password, your hosting-account owner must reset
+          access with the private admin recovery command.
+        </p>
+        <label
+          >Host email<input
+            type="email"
+            name="email"
+            required
+            maxlength="254"
+            autocomplete="username"
+        /></label>
+        <label
+          >Recovery code<input
+            type="password"
+            name="code"
+            required
+            maxlength="100"
+            autocomplete="off"
+        /></label>
+        <label
+          >New host password<input
+            type="password"
+            name="password"
+            required
+            minlength="12"
+            maxlength="128"
+            autocomplete="new-password"
+        /></label>
+        <button type="submit" class="primary-btn full-btn">
+          Reset password
+        </button>
+        <p id="recoverStatus" class="form-status" role="alert"></p>
+      </form>
+    </div>
+    <div
+      class="game-backdrop"
+      id="gameModal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="gameTitle"
+    >
+      <div class="game-room">
+        <button class="modal-close" id="closeGame" aria-label="Minimize game">
+          ×
+        </button>
+        <div class="game-head">
+          <div>
+            <div class="eyebrow">QUIZZES · LIVE GAME SHOW</div>
+            <h2 id="gameTitle">Your community, connected</h2>
+            <div class="pro-host-tools">
+              <button id="openProjector" class="text-btn" type="button">
+                Projector ↗</button
+              ><button
+                id="toggleConsole"
+                class="text-btn"
+                type="button"
+                aria-controls="hostConsole"
+                aria-expanded="false"
+              >
+                Host console
+              </button>
+            </div>
+            <p class="muted" id="hostConnection">Connecting…</p>
+          </div>
+          <div
+            class="live-participation"
+            aria-label="Live participant activity"
+          >
+            <span><b id="playerCount">0</b> joined</span>
+            <span id="answeredCount" role="status">Waiting for players</span>
+          </div>
+          <div class="join-code">
+            <span>JOIN THE FUN · GAME CODE</span><b id="hostCode">—</b
+            ><button class="text-btn" id="copyJoin">Copy join link</button>
+          </div>
+        </div>
+        <div class="game-grid">
+          <div class="game-stage">
+            <div class="stage-top">
+              <span class="pill" id="hostRound">LOBBY</span>
+            </div>
+            <div class="stage-question">
+              <span class="question-number" id="hostQuestionNumber"></span>
+              <h3 id="hostQuestion">Ready when you are.</h3>
+              <p id="hostHint">
+                Share the join link, then start the first question.
+              </p>
+              <div class="live-media-row">
+                <span class="live-dot" id="hostTimer" role="timer">READY</span>
+                <div id="hostMedia"></div>
+                <div class="live-answer-counter">
+                  <b id="liveAnswerMeter">0</b><span>Answers</span>
+                </div>
+              </div>
+              <div class="answer-grid" id="hostOptions"></div>
+              <div id="hostResults"></div>
+              <section
+                id="hostLeaderboard"
+                class="live-leaderboard"
+                hidden
+              ></section>
+            </div>
+            <div id="lobbyMusic"></div>
+            <div
+              class="sound-controls"
+              id="hostSound"
+              data-sound-controls
+            ></div>
+            <div class="stage-controls">
+              <a
+                class="secondary-btn"
+                id="previewPlayer"
+                target="_blank"
+                rel="noopener"
+                href="/join"
+                >Open player view ↗</a
+              ><button class="secondary-btn" id="fullscreenGame" type="button">
+                Full screen</button
+              ><button class="secondary-btn" id="toggleLeaderboard">
+                Show leaderboard</button
+              ><button class="secondary-btn" id="endGame">End game</button
+              ><button class="primary-btn" id="nextQuestion">
+                Start question →
+              </button>
+            </div>
+          </div>
+          <aside id="hostConsole" hidden aria-label="Private host console">
+            <div class="eyebrow">PRIVATE · NOT PROJECTED</div>
+            <h2>Host console</h2>
+            <p class="muted">
+              Use Projector on the audience screen. Keep this window private.
+            </p>
+            <section>
+              <h3>Coming up</h3>
+              <small id="consoleNextRound"></small>
+              <p id="consoleNext">Waiting for the room…</p>
+            </section>
+            <section>
+              <h3>Your question notes</h3>
+              <p id="consoleNotes">No private notes for this question.</p>
+            </section>
+            <section>
+              <h3>Participant image check</h3>
+              <p id="consoleImages" role="status">No image question active.</p>
+              <small
+                >Client-reported download/decode timing. Diagnostic only; never
+                delays the timer or changes points.</small
+              >
+            </section>
+            <section>
+              <h3>Connections</h3>
+              <p id="consoleConnections"></p>
+            </section>
+            <section>
+              <h3>Invite participants</h3>
+              <div id="consoleQR" class="join-qr"></div>
+              <p class="muted">
+                Scan to open the normal code-and-nickname join screen.
+              </p>
+            </section>
+          </aside>
+        </div>
+      </div>
+    </div>
+    <div id="participantApp" hidden>
+      <div class="participant-shell">
+        <header class="participant-header">
+          <a href="/" class="player-logo"
+            ><span class="brand-mark">Q</span><b>Quizzes</b></a
+          ><span class="pill">PLAY TOGETHER</span>
+        </header>
+        <main class="participant-card">
+          <form id="joinPanel">
+            <div class="eyebrow">YOUR SEAT IS WAITING</div>
+            <h1>Join a game</h1>
+            <p class="muted">
+              Enter your game code and nickname. Your next challenge is waiting.
+            </p>
+            <label
+              >Game code<input
+                class="join-input"
+                id="joinCodeInput"
+                placeholder="QZ123ABC"
+                required
+                maxlength="12"
+                autocapitalize="characters"
+                autocomplete="off" /></label
+            ><label
+              >Your nickname<input
+                class="join-input"
+                id="playerNameInput"
+                placeholder="What should we call you?"
+                required
+                maxlength="30"
+                autocomplete="nickname" /></label
+            ><button
+              class="primary-btn full-btn"
+              type="submit"
+              id="joinGameBtn"
+            >
+              Join game →
+            </button>
+            <p class="form-status" id="joinStatus" role="alert"></p>
+            <small class="join-note"
+              >No account needed · Your host can see your nickname, answers and
+              scores.</small
+            >
+          </form>
+          <div id="playerQuestion" hidden>
+            <div
+              class="sound-controls"
+              id="playerSound"
+              data-sound-controls
+            ></div>
+            <div id="playerMusic"></div>
+            <div class="player-meta">
+              <span id="playerRound">LOBBY</span
+              ><b id="playerTimer" role="timer"></b>
+            </div>
+            <h2 id="playerTitle">You’re in!</h2>
+            <p class="muted" id="playerHint">Waiting for your host to start.</p>
+            <div id="playerMedia"></div>
+            <div class="player-answers" id="playerOptions"></div>
+            <button id="submitMulti" class="primary-btn full-btn" hidden>
+              Submit selected answers
+            </button>
+            <form id="textAnswerForm" hidden>
+              <label
+                >Your answer<input
+                  id="textAnswer"
+                  maxlength="200"
+                  required
+                  autocomplete="off" /></label
+              ><button class="primary-btn full-btn" type="submit">
+                Lock in answer
+              </button>
+            </form>
+            <p id="answerStatus" class="answer-status" role="status"></p>
+            <div id="playerResults"></div>
+            <section
+              id="playerLeaderboard"
+              class="live-leaderboard"
+              hidden
+            ></section>
+            <button class="text-btn" id="leavePlayer">Leave game</button>
+          </div>
+        </main>
+        <p class="connection-note" id="playerConnection">
+          Made for your community. Played together.
+        </p>
+      </div>
+    </div>
+    <button id="returnToGame" class="primary-btn return-game" hidden>
+      Return to live game →
+    </button>
+    <dialog
+      id="importDialog"
+      class="import-dialog"
+      aria-labelledby="importHeading"
+    >
+      <button
+        type="button"
+        id="closeImport"
+        class="modal-close"
+        aria-label="Close document import"
+      >
+        ×
+      </button>
+      <div class="eyebrow">FROM DOCUMENT TO GAME NIGHT</div>
+      <h2 id="importHeading">Import your questions</h2>
+      <p>
+        Turn existing questions and marked answers into an editable quiz.
+        Nothing is saved until you review it.
+      </p>
+      <form id="importForm">
+        <label
+          >How are correct answers marked?<select id="answerStyle">
+            <option value="auto">
+              Auto: keys, checkmarks and distinct formatting
+            </option>
+            <option value="marks">Only explicit keys and checkmarks</option>
+            <option value="bold">Keys, checkmarks or bold options</option>
+            <option value="highlight">
+              Keys, checkmarks or highlighted options
+            </option>
+            <option value="color">Keys, checkmarks or colored text</option>
+          </select></label
+        >
+        <p class="muted">
+          Formatting is a hint, not proof. Always review inferred answers. For
+          multiple answers, use “Answers: A, C”.
+        </p>
+        <label
+          >Upload a document<input
+            id="documentFile"
+            type="file"
+            accept=".pdf,.docx,.txt"
+        /></label>
+        <p class="muted">
+          Text PDF (up to 50 pages), Word .docx or UTF-8 .txt · maximum 5 MB. No
+          scans or photographs yet. Use explicit question numbers and A)–F)
+          labels; automatic Word list numbering may not survive extraction.
+        </p>
+        <label
+          >Or paste your questions<textarea
+            id="documentText"
+            rows="8"
+            maxlength="200000"
+            placeholder="1. What is the capital of France?&#10;A) Rome&#10;B) Paris&#10;Answer: B"
+          ></textarea>
+        </label>
+        <details>
+          <summary>See the supported format</summary>
+          <pre>
+Title: Community quiz
+Round 1
+1. What is the capital of France?
+A) Rome
+B) Paris
+Answer: B
+
+2. The Earth orbits the Sun. (True/False)
+Answer: True
+
+3. Finish the phrase: Better ____.
+Answer: together</pre
+          >
+          <p>
+            Alternatively, add an “Answer key:” section with lines such as “1.
+            B”. Missing or conflicting answers are left for you to select—not
+            guessed.
+          </p>
+        </details>
+        <p class="muted">
+          Processed on your Quizzes server. No paid AI or external document
+          service. Files are not retained; only the quiz you choose to save is
+          stored.
+        </p>
+        <p id="importStatus" role="status"></p>
+        <button type="submit" class="primary-btn full-btn" id="importSubmit">
+          Create draft from document
+        </button>
+      </form>
+    </dialog>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <main id="independentApp" class="independent-shell" hidden></main>
+    <dialog
+      id="assignDialog"
+      class="assign-dialog"
+      aria-labelledby="assignHeading"
+    >
+      <button
+        type="button"
+        id="closeAssign"
+        class="modal-close"
+        aria-label="Close assignment settings"
+      >
+        ×
+      </button>
+      <div class="assign-intro">
+        <div class="eyebrow">LEARNING, ON THEIR TIME</div>
+        <div class="assign-art" aria-hidden="true">✦</div>
+        <h2>Make room for discovery.</h2>
+        <p>One link. Every learner at their own pace.</p>
+        <ul>
+          <li>Immediate answer feedback</li>
+          <li>Saved progress</li>
+          <li>A leaderboard after finishing</li>
+        </ul>
+      </div>
+      <form id="assignForm">
+        <div class="eyebrow">SELF-PACED QUIZ</div>
+        <h2 id="assignHeading">Assign your quiz</h2>
+        <p id="assignQuizTitle"></p>
+        <label
+          >Complete before<input
+            id="assignDeadline"
+            type="datetime-local"
+            required
+        /></label>
+        <p class="muted">
+          Your device's local time zone. Default: tomorrow at this time.
+        </p>
+        <label class="setting-toggle"
+          ><span
+            ><b>Question timer</b
+            ><small
+              >Use each question's time limit. Time runs even if the tab is
+              closed. The next timer starts only when Next is pressed.</small
+            ></span
+          ><input id="assignTimer" type="checkbox" role="switch"
+        /></label>
+        <label class="setting-toggle"
+          ><span
+            ><b>Shuffle answer order</b
+            ><small
+              >A stable, randomized order for each participant. Correct answers
+              and partial credit are preserved.</small
+            ></span
+          ><input id="assignShuffle" type="checkbox" role="switch"
+        /></label>
+        <p class="assignment-note">
+          Up to 100 browser attempts. No speed bonus. Correct answers appear
+          after submitting; finishers can see nicknames and scores.
+        </p>
+        <p id="assignStatus" role="status"></p>
+        <div class="button-row">
+          <button id="cancelAssign" type="button" class="secondary-btn">
+            Cancel</button
+          ><button type="submit" class="primary-btn">Create assignment</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="extendDialog" class="import-dialog">
+      <button
+        class="modal-close"
+        id="closeExtendDialog"
+        aria-label="Close deadline extension"
+      >
+        ×
+      </button>
+      <form id="extendPublicationForm">
+        <h2>Extend closing time</h2>
+        <p id="extendCurrent" class="muted"></p>
+        <label
+          >New closing date and time<input
+            type="datetime-local"
+            id="extendDeadline"
+            required
+        /></label>
+        <p class="muted">
+          Uses your device’s local time zone. Only open quizzes can be extended,
+          up to one year ahead. Progress and the same participant link are kept.
+        </p>
+        <p id="extendStatus" role="status"></p>
+        <button class="primary-btn" type="submit">Save new deadline</button>
+      </form>
+    </dialog>
+    <dialog id="publicationDialog" class="import-dialog">
+      <button
+        class="modal-close"
+        id="closePublicationDialog"
+        aria-label="Close published quiz results"
+      >
+        ×
+      </button>
+      <div id="publicationResults"></div>
+      <button id="exportPublication" class="secondary-btn">
+        Download results CSV
+      </button>
+    </dialog>
+    <dialog id="draftRecoveryDialog" class="pro-dialog">
+      <header>
+        <h2>Recover private drafts</h2>
+        <button id="closeDraftRecovery" class="secondary-btn">Close</button>
+      </header>
+      <p>
+        Recovery does not replace a saved quiz until you choose Save quiz.
+        Drafts include incomplete edits and private notes.
+      </p>
+      <div id="draftRecoveryList"></div>
+    </dialog>
+    <script src="/qr-code.js?v=0.9.0-rc.5"></script>
+    <script src="/quiz-sound.js?v=0.9.0-rc.5"></script>
+    <script src="/app.js?v=0.9.0-rc.5"></script>
+    <script src="/extensions.js?v=0.9.0-rc.5"></script>
+    <script src="/professional.js?v=0.9.0-rc.5"></script>
+  </body>
+</html>
