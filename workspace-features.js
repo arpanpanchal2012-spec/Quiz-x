@@ -19,6 +19,27 @@ module.exports = function workspaceFeatures({
   saveQuizEdit,
   uploadMedia,
 }) {
+  // A deleted assignment is recoverable for seven days, then swept away.
+  const RECOVERY_DAYS = 7;
+  const RECOVERY_MS = RECOVERY_DAYS * 24 * 60 * 60 * 1000;
+  // Removes assignments whose recovery window has passed. Safe to call often:
+  // it only ever touches rows already marked deleted.
+  async function purgeDeletedPublications() {
+    const cutoff = Date.now() - RECOVERY_MS;
+    const gone = await db
+      .prepare(
+        "SELECT id FROM publications WHERE deleted IS NOT NULL AND deleted<=?",
+      )
+      .all(cutoff);
+    for (const row of gone)
+      await db.withTransaction(async (tx) => {
+        await tx
+          .prepare("DELETE FROM attempts WHERE publication_id=?")
+          .run(row.id);
+        await tx.prepare("DELETE FROM publications WHERE id=?").run(row.id);
+      });
+    return gone.length;
+  }
   const signingKey = crypto.randomBytes(32);
   const sig = (id, until) =>
     crypto
@@ -410,14 +431,17 @@ module.exports = function workspaceFeatures({
           randomizeAnswers: x.randomizeAnswers === true,
         };
         await db
-          .prepare("INSERT INTO publications VALUES (?,?,?,?,?)")
+          .prepare(
+            "INSERT INTO publications (id, owner_id, document, created, closes) VALUES (?,?,?,?,?)",
+          )
           .run(id, host.id, JSON.stringify(snapshot), created, closes);
         return send(res, { id, path: "/play?quiz=" + id, closes }, 201);
       }
       if (req.method === "GET") {
+        await purgeDeletedPublications();
         const rows = await db
           .prepare(
-            "SELECT * FROM publications WHERE owner_id=? ORDER BY created DESC",
+            "SELECT * FROM publications WHERE owner_id=? AND deleted IS NULL ORDER BY created DESC",
           )
           .all(host.id);
         const result = [];
@@ -441,8 +465,38 @@ module.exports = function workspaceFeatures({
         return send(res, result);
       }
     }
+    if (p === "/api/deleted-publications") {
+      const host = await requireUser(req);
+      if (req.method !== "GET") fail("Action not available.", 405);
+      await purgeDeletedPublications();
+      const rows = await db
+        .prepare(
+          "SELECT * FROM publications WHERE owner_id=? AND deleted IS NOT NULL ORDER BY deleted DESC",
+        )
+        .all(host.id);
+      const result = [];
+      for (const row of rows)
+        result.push({
+          id: row.id,
+          title: JSON.parse(row.document).title,
+          created: Number(row.created),
+          closes: Number(row.closes),
+          deleted: Number(row.deleted),
+          purgeAt: Number(row.deleted) + RECOVERY_MS,
+          participants: Number(
+            (
+              await db
+                .prepare(
+                  "SELECT COUNT(*) AS n FROM attempts WHERE publication_id=?",
+                )
+                .get(row.id)
+            ).n,
+          ),
+        });
+      return send(res, result);
+    }
     const own = p.match(
-      /^\/api\/publications\/([a-f0-9]{32})(?:\/(close|results|extend))?$/,
+      /^\/api\/publications\/([a-f0-9]{32})(?:\/(close|results|extend|restore|reopen))?$/,
     );
     if (own) {
       const host = await requireUser(req),
@@ -453,11 +507,12 @@ module.exports = function workspaceFeatures({
       )
         fail("Published quiz not found.", 404);
       if (
-        (["close", "extend"].includes(own[2]) && req.method === "POST") ||
+        (["close", "extend", "restore", "reopen"].includes(own[2]) &&
+          req.method === "POST") ||
         (!own[2] && req.method === "DELETE")
       ) {
         const x = req.method === "POST" ? await data(req) : {};
-        let closes;
+        let closes, purged = false;
         await db.withTransaction(async (tx) => {
           const current = await tx
             .prepare("SELECT * FROM publications WHERE id=?" + lock)
@@ -466,12 +521,45 @@ module.exports = function workspaceFeatures({
             fail("Published quiz not found.", 404);
           const now = Date.now();
           if (req.method === "DELETE") {
-            if (Number(current.closes) > now)
+            if (!current.deleted && Number(current.closes) > now)
               fail("Close this publication before deleting its results.", 409);
+            // First delete keeps the results for seven days so the same link
+            // can be restored; deleting it again removes it for good.
+            if (current.deleted) {
+              await tx
+                .prepare("DELETE FROM attempts WHERE publication_id=?")
+                .run(pub.id);
+              await tx.prepare("DELETE FROM publications WHERE id=?").run(pub.id);
+            } else
+              await tx
+                .prepare("UPDATE publications SET deleted=? WHERE id=?")
+                .run(now, pub.id);
+            purged = !!current.deleted;
+          } else if (own[2] === "restore" || own[2] === "reopen") {
+            if (own[2] === "restore" && !current.deleted)
+              fail("This publication has not been deleted.", 409);
+            if (own[2] === "reopen" && current.deleted)
+              fail("Restore this publication before reopening it.", 409);
+            if (x.closes === undefined || x.closes === null)
+              closes = Number(current.closes);
+            else {
+              if (
+                !Number.isSafeInteger(x.closes) ||
+                x.closes <= now ||
+                x.closes > now + 365 * 24 * 60 * 60 * 1000
+              )
+                fail(
+                  "Choose a future closing time, no more than one year from now.",
+                );
+              closes = x.closes;
+            }
             await tx
-              .prepare("DELETE FROM attempts WHERE publication_id=?")
-              .run(pub.id);
-            await tx.prepare("DELETE FROM publications WHERE id=?").run(pub.id);
+              .prepare(
+                own[2] === "restore"
+                  ? "UPDATE publications SET closes=?, deleted=NULL WHERE id=?"
+                  : "UPDATE publications SET closes=? WHERE id=?",
+              )
+              .run(closes, pub.id);
           } else {
             if (own[2] === "extend") {
               if (Number(current.closes) <= now)
@@ -494,7 +582,7 @@ module.exports = function workspaceFeatures({
               .run(closes, pub.id);
           }
         });
-        return send(res, { ok: true, closes });
+        return send(res, { ok: true, closes, purged });
       }
       if (own[2] === "results" && req.method === "GET") {
         const attempts = await db
@@ -545,7 +633,13 @@ module.exports = function workspaceFeatures({
         const pub = await tx
           .prepare("SELECT * FROM publications WHERE id=?" + lock)
           .get(id);
-        if (!pub) fail("Published quiz not found.", 404);
+        if (!pub || pub.deleted)
+          fail(
+            pub?.deleted
+              ? "This assignment is no longer available."
+              : "Published quiz not found.",
+            404,
+          );
         const attempt = b
           ? await tx
               .prepare(
@@ -576,7 +670,13 @@ module.exports = function workspaceFeatures({
       const pub = await tx
         .prepare("SELECT * FROM publications WHERE id=?" + lock)
         .get(id);
-      if (!pub) fail("Published quiz not found.", 404);
+      if (!pub || pub.deleted)
+        fail(
+          pub?.deleted
+            ? "This assignment is no longer available."
+            : "Published quiz not found.",
+          404,
+        );
       if (Number(pub.closes) <= Date.now())
         fail("This quiz has closed. Reload to view your results.", 409);
       let attempt = await tx
@@ -616,7 +716,9 @@ module.exports = function workspaceFeatures({
           startAttemptQuestion(pub, progress);
           attempt.document = JSON.stringify(progress);
           await tx
-            .prepare("INSERT INTO attempts VALUES (?,?,?,?,?,?)")
+            .prepare(
+              "INSERT INTO attempts (id, publication_id, browser_hash, name, document, updated) VALUES (?,?,?,?,?,?)",
+            )
             .run(
               attempt.id,
               id,
@@ -680,5 +782,5 @@ module.exports = function workspaceFeatures({
     });
     return send(res, state);
   }
-  return { handle, mediaURL, mediaAccess };
+  return { handle, mediaURL, mediaAccess, purgeDeletedPublications };
 };

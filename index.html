@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#513293" />
     <title>Quizzes · Live learning, together</title>
-    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.8" />
+    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.10" />
   </head>
   <body>
     <div class="app-shell" id="hostApp">
@@ -186,6 +186,19 @@
               </button>
             </div>
             <div id="publicationList"></div>
+            <section id="deletedPublications" class="recovery-panel" hidden>
+              <div class="page-title">
+                <div>
+                  <h3>Recently deleted</h3>
+                  <p class="muted">
+                    A deleted assignment stays here for seven days. Restoring it
+                    brings back the same link, the same results and the same
+                    leaderboard.
+                  </p>
+                </div>
+              </div>
+              <div id="deletedPublicationList"></div>
+            </section>
           </section>
         </section>
         <section id="editor" class="view">
@@ -1065,7 +1078,7 @@ Answer: together</pre
         ×
       </button>
       <form id="extendPublicationForm">
-        <h2>Extend closing time</h2>
+        <h2 id="extendHeading">Extend closing time</h2>
         <p id="extendCurrent" class="muted"></p>
         <label
           >New closing date and time<input
@@ -1073,7 +1086,7 @@ Answer: together</pre
             id="extendDeadline"
             required
         /></label>
-        <p class="muted">
+        <p class="muted" id="extendHelp">
           Uses your device’s local time zone. Only open quizzes can be extended,
           up to one year ahead. Progress and the same participant link are kept.
         </p>
@@ -1105,10 +1118,10 @@ Answer: together</pre
       </p>
       <div id="draftRecoveryList"></div>
     </dialog>
-    <script src="/qr-code.js?v=0.9.0-rc.8"></script>
-    <script src="/quiz-sound.js?v=0.9.0-rc.8"></script>
-    <script src="/app.js?v=0.9.0-rc.8"></script>
-    <script src="/extensions.js?v=0.9.0-rc.8"></script>
-    <script src="/professional.js?v=0.9.0-rc.8"></script>
+    <script src="/qr-code.js?v=0.9.0-rc.10"></script>
+    <script src="/quiz-sound.js?v=0.9.0-rc.10"></script>
+    <script src="/app.js?v=0.9.0-rc.10"></script>
+    <script src="/extensions.js?v=0.9.0-rc.10"></script>
+    <script src="/professional.js?v=0.9.0-rc.10"></script>
   </body>
 </html>

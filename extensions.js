@@ -4,7 +4,9 @@
   let resultForExport = null,
     publicState = null,
     publicationRows = [],
+    deletedRows = [],
     extendId = null,
+    extendMode = "extend",
     publishQuizId = null;
   async function copyLink(url) {
     try {
@@ -24,7 +26,11 @@
       $("#publicationResults").innerHTML = "";
       resultForExport = null;
       publicationRows = [];
+      deletedRows = [];
       extendId = null;
+      extendMode = "extend";
+      $("#deletedPublications").hidden = true;
+      $("#deletedPublicationList").innerHTML = "";
       $("#extendDialog").close();
       $("#publicationDialog").close();
       $("#assignDialog").close();
@@ -32,17 +38,30 @@
       return;
     }
     try {
-      const rows = await api("/api/publications");
+      const [rows, deleted] = await Promise.all([
+        api("/api/publications"),
+        api("/api/deleted-publications"),
+      ]);
       if (account?.id !== ownerId) return;
       publicationRows = rows;
+      deletedRows = deleted;
       $("#publicationList").innerHTML = rows.length
         ? rows
             .map(
               (p) =>
-                `<article class="publication-card"><div><b>${e(p.title)}</b><p>${Date.now() < p.closes ? "Open until" : "Closed"} ${e(new Date(p.closes).toLocaleString())} · ${p.participants}/100 attempts · ${p.settings?.timerEnabled ? "Timed" : "Untimed"}${p.settings?.randomizeAnswers ? " · Shuffled answers" : ""}</p><input readonly aria-label="Published quiz link" value="${e(location.origin + "/play?quiz=" + p.id)}"></div><div class="button-row"><button class="secondary-btn" data-copy-publication="${p.id}">Copy link</button><button class="secondary-btn" data-publication-results="${p.id}">View results</button>${Date.now() < p.closes ? `<button class="secondary-btn" data-extend-publication="${p.id}">Extend time</button><button class="text-btn" data-close-publication="${p.id}">Close now</button>` : `<button class="text-btn" data-delete-publication="${p.id}">Delete results</button>`}</div></article>`,
+                `<article class="publication-card"><div><b>${e(p.title)}</b><p>${Date.now() < p.closes ? "Open until" : "Closed"} ${e(new Date(p.closes).toLocaleString())} · ${p.participants}/100 attempts · ${p.settings?.timerEnabled ? "Timed" : "Untimed"}${p.settings?.randomizeAnswers ? " · Shuffled answers" : ""}</p><input readonly aria-label="Published quiz link" value="${e(location.origin + "/play?quiz=" + p.id)}"></div><div class="button-row"><button class="secondary-btn" data-copy-publication="${p.id}">Copy link</button><button class="secondary-btn" data-publication-results="${p.id}">View results</button>${Date.now() < p.closes ? `<button class="secondary-btn" data-extend-publication="${p.id}">Extend time</button><button class="text-btn" data-close-publication="${p.id}">Close now</button>` : `<button class="secondary-btn" data-reopen-publication="${p.id}">Reopen</button><button class="text-btn" data-delete-publication="${p.id}">Delete results</button>`}</div></article>`,
             )
             .join("")
         : '<p class="muted">Choose Assign quiz on a saved quiz to create your first link.</p>';
+      $("#deletedPublications").hidden = !deleted.length;
+      $("#deletedPublicationList").innerHTML = deleted.length
+        ? deleted
+            .map(
+              (p) =>
+                `<article class="publication-card"><div><b>${e(p.title)}</b><p>Deleted ${e(new Date(p.deleted).toLocaleString())} · ${p.participants}/100 attempts kept · removed for good on ${e(new Date(p.purgeAt).toLocaleString())}</p><input readonly aria-label="Published quiz link" value="${e(location.origin + "/play?quiz=" + p.id)}"></div><div class="button-row"><button class="secondary-btn" data-copy-publication="${p.id}">Copy link</button><button class="primary-btn" data-restore-publication="${p.id}">Restore</button><button class="secondary-btn" data-reopen-publication="${p.id}">Restore and reopen…</button><button class="text-btn" data-purge-publication="${p.id}">Delete for good</button></div></article>`,
+            )
+            .join("")
+        : "";
     } catch (err) {
       $("#publicationList").textContent = err.message;
     }
@@ -105,27 +124,47 @@
         );
         await publications();
       }
-      if (b.dataset.extendPublication) {
-        const p = publicationRows.find(
-          (p) => p.id === b.dataset.extendPublication,
-        );
+      if (b.dataset.extendPublication || b.dataset.reopenPublication) {
+        const id = b.dataset.extendPublication || b.dataset.reopenPublication;
+        const p =
+          publicationRows.find((row) => row.id === id) ||
+          deletedRows.find((row) => row.id === id);
         if (!p) return;
         extendId = p.id;
-        const suggested = new Date(p.closes + 24 * 60 * 60 * 1000);
+        extendMode = b.dataset.reopenPublication
+          ? deletedRows.some((row) => row.id === id)
+            ? "restore"
+            : "reopen"
+          : "extend";
+        const suggested = new Date(
+          Math.max(p.closes, Date.now()) + 24 * 60 * 60 * 1000,
+        );
         $("#extendDeadline").value = new Date(
           suggested.getTime() - suggested.getTimezoneOffset() * 60000,
         )
           .toISOString()
           .slice(0, 16);
+        $("#extendHeading").textContent =
+          extendMode === "extend"
+            ? "Extend closing time"
+            : extendMode === "reopen"
+              ? "Reopen with the same link"
+              : "Restore and reopen";
         $("#extendCurrent").textContent =
-          "Current deadline: " + new Date(p.closes).toLocaleString();
+          extendMode === "restore"
+            ? `Deleted ${new Date(p.deleted).toLocaleString()} · ${p.participants} saved result(s) will come back.`
+            : "Current deadline: " + new Date(p.closes).toLocaleString();
+        $("#extendHelp").textContent =
+          extendMode === "extend"
+            ? "Uses your device’s local time zone. Only open quizzes can be extended, up to one year ahead. Progress and the same participant link are kept."
+            : `Uses your device’s local time zone. The link, every saved result and the leaderboard come back, up to one year ahead.`;
         $("#extendStatus").textContent = "";
         $("#extendDialog").showModal();
       }
       if (
         b.dataset.deletePublication &&
         confirm(
-          "Permanently delete this closed publication and all its participant results? The old link will stop working. Your saved quiz and existing backup files are kept.",
+          "Delete this assignment? It moves to Recently deleted for seven days, keeping the results, and the link stops working until you restore it. Your saved quiz and existing backup files are kept.",
         )
       ) {
         await api("/api/publications/" + b.dataset.deletePublication, {
@@ -134,7 +173,29 @@
         resultForExport = null;
         $("#publicationResults").innerHTML = "";
         await publications();
-        showToast("Published results deleted");
+        showToast("Moved to Recently deleted — restore it any time this week");
+      }
+      if (b.dataset.purgePublication) {
+        const row = deletedRows.find((p) => p.id === b.dataset.purgePublication);
+        if (
+          confirm(
+            `Delete \u201c${row?.title || "this assignment"}\u201d and its ${row?.participants ?? 0} saved result(s) for good? This cannot be undone.`,
+          )
+        ) {
+          await api("/api/publications/" + b.dataset.purgePublication, {
+            method: "DELETE",
+          });
+          await publications();
+          showToast("Assignment deleted for good");
+        }
+      }
+      if (b.dataset.restorePublication) {
+        await api(
+          "/api/publications/" + b.dataset.restorePublication + "/restore",
+          { method: "POST", body: "{}" },
+        );
+        await publications();
+        showToast("Restored — the same link and every saved result are back");
       }
       if (b.dataset.publicationResults) {
         const viewerId = account?.id;
@@ -190,15 +251,27 @@
     const button = $("button[type=submit]", event.target);
     button.disabled = true;
     try {
-      await api("/api/publications/" + extendId + "/extend", {
-        method: "POST",
-        body: JSON.stringify({
-          closes: new Date($("#extendDeadline").value).getTime(),
-        }),
-      });
+      const closes = new Date($("#extendDeadline").value).getTime(),
+        mode = extendMode;
+      await api(
+        "/api/publications/" +
+          extendId +
+          (extendMode === "extend" ? "/extend" : extendMode === "reopen" ? "/reopen" : "/restore"),
+        {
+          method: "POST",
+          body: JSON.stringify({ closes }),
+        },
+      );
       $("#extendDialog").close();
+      extendMode = "extend";
       await publications();
-      showToast("Deadline extended; the participant link is unchanged");
+      showToast(
+        mode === "extend"
+          ? "Deadline extended; the participant link is unchanged"
+          : mode === "reopen"
+            ? "Reopened — the same participant link works again"
+            : "Restored and reopened — the same link and results are back",
+      );
     } catch (err) {
       $("#extendStatus").textContent = err.message;
     } finally {

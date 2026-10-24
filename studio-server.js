@@ -176,6 +176,11 @@ module.exports = ({ db, json, data, fail, owns, isSiteAdmin, rate }) =>
         )
           fail("Invalid draft correct answer.");
         if (
+          q.buzzPenalty !== undefined &&
+          ![0, 25, 50, 100].includes(q.buzzPenalty)
+        )
+          fail("Invalid wrong-buzz penalty.");
+        if (
           q.mediaType !== undefined &&
           (typeof q.mediaType !== "string" || q.mediaType.length > 100)
         )

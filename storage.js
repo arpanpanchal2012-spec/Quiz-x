@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS ownership (kind TEXT NOT NULL, item_id TEXT NOT NULL,
 CREATE INDEX IF NOT EXISTS ownership_by_owner ON ownership(owner_id,kind);
 CREATE TABLE IF NOT EXISTS editor_drafts (owner_id TEXT NOT NULL REFERENCES admins(id), draft_key TEXT NOT NULL, version BIGINT NOT NULL, updated BIGINT NOT NULL, document TEXT NOT NULL, PRIMARY KEY(owner_id,draft_key));
 CREATE TABLE IF NOT EXISTS invitations (digest TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES admins(id), expires BIGINT NOT NULL, used BIGINT NOT NULL);
-CREATE TABLE IF NOT EXISTS publications (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES admins(id), document TEXT NOT NULL, created BIGINT NOT NULL, closes BIGINT NOT NULL);
+CREATE TABLE IF NOT EXISTS publications (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES admins(id), document TEXT NOT NULL, created BIGINT NOT NULL, closes BIGINT NOT NULL, deleted BIGINT);
 CREATE TABLE IF NOT EXISTS attempts (id TEXT PRIMARY KEY, publication_id TEXT NOT NULL REFERENCES publications(id), browser_hash TEXT NOT NULL, name TEXT NOT NULL, document TEXT NOT NULL, updated BIGINT NOT NULL, UNIQUE(publication_id,browser_hash));
 `;
 const TABLES = [
@@ -164,6 +164,17 @@ const ready = (async () => {
       await db.exec("REVOKE ALL ON SCHEMA quizzes_private FROM PUBLIC");
     }
     await db.exec(schema);
+    // Databases created before recovery existed have no "deleted" column on
+    // publications; add it without disturbing a single stored row.
+    if (db.kind === "postgres")
+      await db.exec(
+        "ALTER TABLE publications ADD COLUMN IF NOT EXISTS deleted BIGINT",
+      );
+    else {
+      const columns = await db.prepare("PRAGMA table_info(publications)").all();
+      if (!columns.some((column) => column.name === "deleted"))
+        await db.exec("ALTER TABLE publications ADD COLUMN deleted BIGINT");
+    }
     stage = "DATABASE_SEED";
     // Use a marker so deleting the last quiz does not bring the sample back.
     if (

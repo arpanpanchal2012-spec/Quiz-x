@@ -306,7 +306,18 @@ async function validateQuiz(input, ownerId, id = crypto.randomUUID()) {
         question.accepted = x.accepted.map((a) =>
           bounded(a, 200, "accepted answer"),
         );
-      } else {
+      }
+      // Negative marking is a host choice for live buzzer rounds only. In an
+      // assigned quiz the same question is graded as a typed answer, so no
+      // penalty can apply there.
+      if (x.type === "buzzer") {
+        if (x.buzzPenalty === undefined || x.buzzPenalty === null)
+          question.buzzPenalty = 0;
+        else if (!BUZZ_PENALTIES.includes(Number(x.buzzPenalty)))
+          fail("Choose a wrong-buzz penalty of none, 25%, 50% or 100%.");
+        else question.buzzPenalty = Number(x.buzzPenalty);
+      } else if (x.buzzPenalty !== undefined) question.buzzPenalty = 0;
+      if (x.type !== "text" && x.type !== "buzzer") {
         question.options = x.type === "boolean" ? ["True", "False"] : x.options;
         if (
           !Array.isArray(question.options) ||
@@ -792,6 +803,8 @@ function broadcast(g, type, data = {}) {
 // results are untouched: only the cosmetic "who has answered / who is online"
 // list is throttled, and every phase broadcast still carries a fresh roster.
 const ROSTER_THROTTLE_MS = 700;
+// Percentage of the question's points lost by a wrong buzz, chosen per question.
+const BUZZ_PENALTIES = [0, 25, 50, 100];
 const rosterPending = new Map();
 function clearRoster(g) {
   const entry = rosterPending.get(g.code);
@@ -904,6 +917,7 @@ function buzzQueue(g) {
     name: g.players.get(b.playerId)?.name || "Player",
     status: b.status,
     elapsedMs: b.at - (g.startedAt || b.at),
+    points: b.points || 0,
     connected: !!g.players.get(b.playerId)?.ws,
   }));
 }
@@ -1444,6 +1458,7 @@ wss.on("connection", (ws, req) => {
             );
             p.answered = true;
             p.pending = points;
+            entry.points = points;
             g.history.push({
               playerId: p.id,
               questionIndex: g.index,
@@ -1456,13 +1471,18 @@ wss.on("connection", (ws, req) => {
             g.buzzingOpen = false;
             return finishBuzzer(g, true);
           }
+          const penalty = Math.round(
+            current(g).points * ((Number(current(g).buzzPenalty) || 0) / 100),
+          );
+          entry.points = -penalty;
+          p.pending = (p.pending || 0) - penalty;
           g.history.push({
             playerId: p.id,
             questionIndex: g.index,
             answer: null,
             correct: false,
             credit: 0,
-            points: 0,
+            points: -penalty,
             elapsedMs: elapsed,
           });
           return broadcastBuzzes(g);
@@ -1598,11 +1618,19 @@ checkStartup([
       );
       process.exit(1);
     }
-    server.listen(PORT, "0.0.0.0", () =>
+    server.listen(PORT, "0.0.0.0", async () => {
       console.log(
         `Quizzes listening on 0.0.0.0:${PORT} · ${db.kind} · ${mediaStore.remote ? "persistent cloud media" : "local media"}${setupEnabled ? " · private-preview first-run setup enabled" : ""}`,
-      ),
-    );
+      );
+      // Sweep assignments whose seven-day recovery window has passed.
+      const swept = await features
+        .purgeDeletedPublications()
+        .catch((error) => (console.error("Recovery sweep failed.", error), 0));
+      if (swept)
+        console.log(
+          `Removed ${swept} deleted assignment(s) older than seven days.`,
+        );
+    });
   })
   .catch((error) => {
     logStartupFailure("SERVER_STARTUP", error);

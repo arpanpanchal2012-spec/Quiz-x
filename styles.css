@@ -3071,6 +3071,17 @@ textarea:focus-visible {
   flex: 1;
   min-width: 230px;
 }
+.recovery-panel {
+  margin-top: 26px;
+  padding: 20px;
+  border: 1px dashed #c9b9e3;
+  border-radius: 14px;
+  background: #faf7ff;
+}
+.recovery-panel h3 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
 .invite-panel p {
   font-size: 14px;
   line-height: 1.6;
@@ -6047,6 +6058,16 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+.buzz-points {
+  font-weight: 800;
+  white-space: nowrap;
+}
+.buzz-row.buzz-wrong .buzz-points {
+  color: #ffd0dd;
+}
+.buzz-row.buzz-correct .buzz-points {
+  color: #b6ffdf;
 }
 .buzzer-play button {
   flex: 1 1 auto;
