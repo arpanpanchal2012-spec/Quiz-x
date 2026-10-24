@@ -609,7 +609,7 @@ test("Host editor and a separate mobile player complete a saved multimedia quiz"
     .getByRole("button", { name: "Create assignment", exact: true })
     .click();
   const publication = page
-    .locator(".publication-card")
+    .locator("#publicationList .publication-card")
     .filter({ hasText: "Round tools and 24h" });
   await expect(publication).toBeVisible();
   const publishedLink = await publication.locator("input").inputValue();
@@ -741,7 +741,9 @@ test("Host editor and a separate mobile player complete a saved multimedia quiz"
   ).toBeVisible();
   await friendPage.locator('.nav-item[data-view="quizzes"]').click();
   await expect(friendPage.locator(".library-card")).toHaveCount(0);
-  await expect(friendPage.locator(".publication-card")).toHaveCount(0);
+  await expect(
+    friendPage.locator("#publicationList .publication-card"),
+  ).toHaveCount(0);
   await page.locator('.nav-item[data-view="quizzes"]').click();
   await newCard.getByRole("button", { name: "Host game" }).click();
   await expect(page.locator("#hostCode")).toHaveText(/^QZ[A-F0-9]{6}$/);
@@ -888,6 +890,12 @@ test("Host editor and a separate mobile player complete a saved multimedia quiz"
   await page.locator('.nav-item[data-view="quizzes"]').click();
   await publication.getByRole("button", { name: "Delete results" }).click();
   await expect(publication).toHaveCount(0);
+  // It is recoverable for seven days on the same link, then removed for good.
+  const recovered = page
+    .locator("#deletedPublicationList .publication-card")
+    .filter({ hasText: "Round tools and 24h" });
+  await expect(recovered).toBeVisible();
+  await expect(recovered.locator("input")).toHaveValue(publishedLink);
   await expect(newCard).toBeVisible();
   await asyncPlayer.reload();
   await expect(
@@ -1441,7 +1449,7 @@ test("Host editor and a separate mobile player complete a saved multimedia quiz"
     .getByRole("button", { name: "Create assignment", exact: true })
     .click();
   const timedPublication = page
-    .locator(".publication-card")
+    .locator("#publicationList .publication-card")
     .filter({ hasText: "Studio assignment check" });
   await expect(timedPublication).toContainText("Timed · Shuffled answers");
   const timedURL = await timedPublication.locator("input").inputValue();

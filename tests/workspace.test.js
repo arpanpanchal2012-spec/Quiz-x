@@ -1123,6 +1123,78 @@ test(
             ).res.status,
             404,
           );
+          // The first delete is recoverable: the link stops working, but the
+          // results and the same id stay available for seven days.
+          assert.equal(
+            (
+              await req(
+                "/api/publications/" + fresh.id,
+                "DELETE",
+                undefined,
+                owner,
+              )
+            ).res.status,
+            200,
+          );
+          assert.equal(
+            (await req("/api/published/" + fresh.id, "GET", undefined, visitor))
+              .res.status,
+            404,
+          );
+          const kept = await req(
+            "/api/publications/" + fresh.id + "/results",
+            "GET",
+            undefined,
+            owner,
+          );
+          assert.equal(kept.res.status, 200, "results survive the first delete");
+          assert.equal(kept.value.leaderboard.length, 1);
+          assert.equal(
+            (
+              await req(
+                "/api/publications/" + fresh.id + "/restore",
+                "POST",
+                {},
+                owner,
+              )
+            ).res.status,
+            200,
+          );
+          assert.equal(
+            (await req("/api/published/" + fresh.id, "GET", undefined, visitor))
+              .value.closed,
+            true,
+            "a restored assignment comes back closed",
+          );
+          // Deleting it again moves it back to the recovery bin; only deleting
+          // it from there (or seven days) removes it for good.
+          assert.equal(
+            (
+              await req(
+                "/api/publications/" + fresh.id,
+                "DELETE",
+                undefined,
+                owner,
+              )
+            ).res.status,
+            200,
+          );
+          assert.equal(
+            (await req("/api/published/" + fresh.id, "GET", undefined, visitor))
+              .res.status,
+            404,
+          );
+          assert.equal(
+            (
+              await req(
+                "/api/publications/" + fresh.id + "/results",
+                "GET",
+                undefined,
+                owner,
+              )
+            ).res.status,
+            200,
+          );
           assert.equal(
             (
               await req(
