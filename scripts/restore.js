@@ -11,7 +11,7 @@ const columns = {
   metadata: ["key", "value"],
   ownership: ["kind", "item_id", "owner_id"],
   invitations: ["digest", "owner_id", "expires", "used"],
-  publications: ["id", "owner_id", "document", "created", "closes"],
+  publications: ["id", "owner_id", "document", "created", "closes", "deleted"],
   editor_drafts: ["owner_id", "draft_key", "version", "updated", "document"],
   attempts: [
     "id",
@@ -77,7 +77,8 @@ const columns = {
           .prepare(
             `INSERT INTO ${table} (${names.join(",")}) VALUES (${names.map(() => "?").join(",")})`,
           )
-          .run(...names.map((k) => row[k]));
+          // Backups taken before an upgrade simply omit newer columns.
+          .run(...names.map((k) => (row[k] === undefined ? null : row[k])));
     }
   });
   await migrateOwnership();
