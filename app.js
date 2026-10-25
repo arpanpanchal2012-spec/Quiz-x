@@ -1426,6 +1426,8 @@ function handleMessage(m) {
       });
       $("#joinPanel").hidden = true;
       $("#playerQuestion").hidden = false;
+      if (m.reclaimed)
+        showToast("Welcome back — your score and place are restored.");
     } else {
       if (m.hostToken)
         storeConnection({ code: game.code, hostToken: m.hostToken });
@@ -1983,6 +1985,34 @@ $("#buzzQueue").onclick = (event) => {
     correct: button.dataset.verdict === "1",
   });
 };
+$("#exportLiveGame").onclick = async () => {
+  if (!game) return;
+  const button = $("#exportLiveGame");
+  const label = button.textContent;
+  button.disabled = true;
+  button.textContent = "Packing…";
+  try {
+    const response = await fetch(
+      "/api/live/" + encodeURIComponent(game.code) + "/export",
+    );
+    if (!response.ok) {
+      const value = await response.json().catch(() => ({}));
+      throw Error(value.error || "Could not save this game.");
+    }
+    const blob = await response.blob();
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "quizzes-live-" + game.code + ".json";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 30000);
+    showToast("Saved a copy. Upload it on your other site to carry on there.");
+  } catch (e) {
+    showToast(e.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = label;
+  }
+};
 $("#endGame").onclick = () => {
   if (game?.status === "ended") {
     minimizeGame();
@@ -1990,6 +2020,13 @@ $("#endGame").onclick = () => {
   }
   if (game && confirm("End this game and save everyone’s results?"))
     send("end_game");
+};
+// The published-quizzes panel resumes a room that was saved on another site.
+window.QuizzesLive = {
+  resume(code, hostToken) {
+    storeConnection({ code, hostToken });
+    openSocket({ type: "resume_host", code, hostToken });
+  },
 };
 function minimizeGame() {
   if (document.fullscreenElement === $("#gameModal"))

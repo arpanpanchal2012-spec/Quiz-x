@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS editor_drafts (owner_id TEXT NOT NULL REFERENCES admi
 CREATE TABLE IF NOT EXISTS invitations (digest TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES admins(id), expires BIGINT NOT NULL, used BIGINT NOT NULL);
 CREATE TABLE IF NOT EXISTS publications (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES admins(id), document TEXT NOT NULL, created BIGINT NOT NULL, closes BIGINT NOT NULL, deleted BIGINT);
 CREATE TABLE IF NOT EXISTS attempts (id TEXT PRIMARY KEY, publication_id TEXT NOT NULL REFERENCES publications(id), browser_hash TEXT NOT NULL, name TEXT NOT NULL, document TEXT NOT NULL, updated BIGINT NOT NULL, UNIQUE(publication_id,browser_hash));
+CREATE TABLE IF NOT EXISTS live_games (code TEXT PRIMARY KEY, admin_id TEXT NOT NULL REFERENCES admins(id), saved BIGINT NOT NULL, document TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS live_answers (code TEXT NOT NULL, seq BIGINT NOT NULL, document TEXT NOT NULL, PRIMARY KEY(code, seq));
 `;
 const TABLES = [
   "admins",
@@ -58,7 +60,7 @@ if (cloud) {
   );
   const qualify = (sql) =>
     sql.replace(
-      /'(?:''|[^'])*'|\b(admins|sessions|quizzes|media|reports|recovery_codes|metadata|ownership|invitations|publications|attempts|editor_drafts)\b/g,
+      /'(?:''|[^'])*'|\b(admins|sessions|quizzes|media|reports|recovery_codes|metadata|ownership|invitations|publications|attempts|editor_drafts|live_games|live_answers)\b/g,
       (text, name) => (name ? "quizzes_private." + name : text),
     );
   const api = (client) => ({

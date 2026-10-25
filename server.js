@@ -21,6 +21,7 @@ const mediaStore = loadStartupModule("./media-store", "MEDIA_CONFIG");
 const { writeBackup } = require("./backup-service");
 const { importDocument } = require("./quiz-import");
 const rules = require("./quiz-rules");
+const live = require("./live-saves");
 const features = require("./workspace-features")({
   db,
   user,
@@ -80,7 +81,7 @@ function bounded(value, max, label, required = true) {
     fail(`Invalid ${label}`);
   return value.trim();
 }
-function rate(key, max, windowMs) {
+function rate(key, max, windowMs, message) {
   const now = Date.now();
   let entry = limits.get(key);
   if (!entry || entry.until < now) {
@@ -90,8 +91,25 @@ function rate(key, max, windowMs) {
     };
     limits.set(key, entry);
   }
-  if (++entry.n > max) fail("Too many attempts. Please try again later.", 429);
+  if (++entry.n > max) {
+    const minutes = Math.max(1, Math.ceil((entry.until - now) / 60000));
+    fail(
+      typeof message === "function"
+        ? message(minutes)
+        : "Too many attempts. Please try again later.",
+      429,
+    );
+  }
 }
+// Building one real quiz means one picture per question, and the editor allows
+// 200 questions. The old ceiling of 60 files an hour stopped honest work part
+// way through a quiz, so the allowance now covers a whole quiz being written in
+// a single sitting. It still bounds a compromised account, and every upload is
+// re-encoded down before it is stored.
+const UPLOAD_PER_HOUR = Math.min(
+  2000,
+  Math.max(20, Number(process.env.UPLOAD_PER_HOUR) || 400),
+);
 function peer(req) {
   return process.env.TRUST_PROXY === "1"
     ? String(req.headers["x-forwarded-for"] || req.socket.remoteAddress)
@@ -162,9 +180,9 @@ async function body(req, max = 1024 * 1024) {
   }
   return Buffer.concat(chunks);
 }
-async function data(req) {
+async function data(req, max) {
   try {
-    return JSON.parse((await body(req)).toString());
+    return JSON.parse((await body(req, max)).toString());
   } catch (e) {
     if (e.status) throw e;
     fail("Invalid JSON");
@@ -209,7 +227,13 @@ async function saveQuizEdit(req, res, ownerId, id, actor, oversight = false) {
   return json(res, 200, q);
 }
 async function uploadMedia(req, res, ownerId, actorId) {
-  rate("upload:" + actorId, 60, 60 * 60 * 1000);
+  rate(
+    "upload:" + actorId,
+    UPLOAD_PER_HOUR,
+    60 * 60 * 1000,
+    (minutes) =>
+      `You have added ${UPLOAD_PER_HOUR} files in the last hour. You can add images again in about ${minutes} minute${minutes === 1 ? "" : "s"}; quizzes and their pictures already added are safe.`,
+  );
   const b = await body(req, 10 * 1024 * 1024);
   const mime = sniff(b);
   if (!mime) fail("Upload PNG, JPEG, GIF, WebP, MP3, WAV, or OGG.");
@@ -649,6 +673,20 @@ const server = http.createServer(async (req, res) => {
         );
         return json(res, 200, result);
       }
+      const liveExport = p.match(/^\/api\/live\/(QZ[A-Z0-9]{6})\/export$/);
+      if (liveExport && req.method === "GET") {
+        const g = games.get(liveExport[1]);
+        if (!g || g.adminId !== admin.id)
+          fail("That game is not running on this site.", 404);
+        const bundle = await buildLiveExport(g);
+        return json(res, 200, bundle, {
+          "Content-Disposition": `attachment; filename="quizzes-live-${g.code}.json"`,
+        });
+      }
+      if (p === "/api/live/import" && req.method === "POST") {
+        rate("live-import:" + admin.id, 10, 60 * 60 * 1000);
+        return json(res, 201, await importLiveGame(await data(req, 32 * 1024 * 1024), admin));
+      }
       if (p === "/api/quizzes" && req.method === "GET")
         return json(
           res,
@@ -795,6 +833,26 @@ function send(ws, type, data = {}) {
 }
 function broadcast(g, type, data = {}) {
   g.clients.forEach((ws) => send(ws, type, data));
+  markLiveDirty(g);
+}
+// Recovery mirror. Coalesced to at most one write per second per room, so a
+// 100-player event adds about one small row rewrite per second rather than one
+// per answer. Room state is a few kilobytes; answers are journalled separately.
+const liveSaveTimers = new Map();
+function markLiveDirty(g) {
+  if (!g || g.status === "ended" || liveSaveTimers.has(g.code)) return;
+  const timer = setTimeout(() => {
+    liveSaveTimers.delete(g.code);
+    live.saveQuietly(g);
+  }, 1000);
+  timer.unref?.();
+  liveSaveTimers.set(g.code, timer);
+}
+function recordAnswer(g, entry) {
+  entry.seq = (g.historySeq = (g.historySeq || 0) + 1);
+  g.history.push(entry);
+  live.appendQuietly(g, entry);
+  markLiveDirty(g);
 }
 // Event capacity. A full room sends one roster update per join, leave and answer.
 // With 100 players that is ~100 messages of ~10 KB each fanned out to ~101
@@ -1003,6 +1061,9 @@ async function endGame(g, reason = "Host ended the game") {
     throw e;
   }
   g.status = "ended";
+  live.forget(g.code).catch(() =>
+    console.error("Could not clear the saved copy of a finished game."),
+  );
   broadcast(g, "game_ended", {
     game: state(g),
     leaderboard: ranking(g),
@@ -1138,6 +1199,7 @@ function sync(ws, g, type, extra = {}) {
     visibleLeaderboard: g.leaderboardVisible ? ranking(g) : [],
     ...extra,
   });
+  markLiveDirty(g);
   sendHostImages(ws, g);
   if (ws === g.host) sendHostPreview(g);
 }
@@ -1216,6 +1278,8 @@ wss.on("connection", (ws, req) => {
         const g = {
           code,
           quiz,
+          quizId: String(msg.quizId || ""),
+          organization: admin.organization || "",
           adminId: admin.id,
           hostToken,
           displayToken: crypto.randomBytes(32).toString("hex"),
@@ -1238,6 +1302,7 @@ wss.on("connection", (ws, req) => {
           clients: new Set([ws]),
           players: new Map(),
           history: [],
+          historySeq: 0,
           stats: {},
         };
         games.set(code, g);
@@ -1245,6 +1310,7 @@ wss.on("connection", (ws, req) => {
         ws.role = "host";
         ws.adminId = admin.id;
         ws.sessionHash = hash(token(req));
+        live.saveQuietly(g);
         return sync(ws, g, "game_created", {
           hostToken,
           music: features.mediaURL(quiz.music),
@@ -1313,6 +1379,7 @@ wss.on("connection", (ws, req) => {
         );
         if (!g) fail("Game not found. Check the code.");
         let p;
+        let reclaimed = false;
         if (msg.type === "resume_player") {
           p = [...g.players.values()].find(
             (p) => p.resumeToken === msg.playerToken,
@@ -1324,21 +1391,30 @@ wss.on("connection", (ws, req) => {
           if (g.status === "ended") fail("This game has ended.");
           if (g.players.size >= 100) fail("This game is full (100 players).");
           const name = bounded(msg.name, 30, "nickname");
-          if (
-            [...g.players.values()].some(
-              (p) => normalize(p.name) === normalize(name),
-            )
-          )
-            fail("That nickname is taken. Try another.");
-          p = {
-            id: crypto.randomUUID(),
-            name,
-            score: 0,
-            answered: false,
-            pending: 0,
-            resumeToken: crypto.randomBytes(32).toString("hex"),
-          };
-          g.players.set(p.id, p);
+          const seat = [...g.players.values()].find(
+            (p) => normalize(p.name) === normalize(name),
+          );
+          if (seat) {
+            // A room rescued on another site cannot carry a browser token
+            // across, so a returning player takes back their own seat by name
+            // while that seat is empty. A connected seat is never taken over.
+            if (!g.imported || seat.ws)
+              fail("That nickname is taken. Try another.");
+            seat.resumeToken = crypto.randomBytes(32).toString("hex");
+            seat.ws = null;
+            p = seat;
+            reclaimed = true;
+          } else {
+            p = {
+              id: crypto.randomUUID(),
+              name,
+              score: 0,
+              answered: false,
+              pending: 0,
+              resumeToken: crypto.randomBytes(32).toString("hex"),
+            };
+            g.players.set(p.id, p);
+          }
         }
         p.ws = ws;
         ws.game = g;
@@ -1350,6 +1426,7 @@ wss.on("connection", (ws, req) => {
           playerId: p.id,
           playerToken: p.resumeToken,
           answered: p.answered,
+          reclaimed,
         });
         return broadcastRoster(g);
       }
@@ -1459,7 +1536,7 @@ wss.on("connection", (ws, req) => {
             p.answered = true;
             p.pending = points;
             entry.points = points;
-            g.history.push({
+            recordAnswer(g, {
               playerId: p.id,
               questionIndex: g.index,
               answer: null,
@@ -1476,7 +1553,7 @@ wss.on("connection", (ws, req) => {
           );
           entry.points = -penalty;
           p.pending = (p.pending || 0) - penalty;
-          g.history.push({
+          recordAnswer(g, {
             playerId: p.id,
             questionIndex: g.index,
             answer: null,
@@ -1509,7 +1586,7 @@ wss.on("connection", (ws, req) => {
         );
         p.answered = true;
         p.pending = points;
-        g.history.push({
+        recordAnswer(g, {
           playerId: p.id,
           questionIndex: g.index,
           answer,
@@ -1630,6 +1707,16 @@ checkStartup([
         console.log(
           `Removed ${swept} deleted assignment(s) older than seven days.`,
         );
+      // Pick up any live game that was running when this process last stopped.
+      const recovered = await restoreLiveGames();
+      if (recovered.resumed)
+        console.log(
+          `Recovered ${recovered.resumed} unfinished live game(s); players and hosts reconnect to the same code.`,
+        );
+      if (recovered.retired)
+        console.log(
+          `Closed ${recovered.retired} unfinished live game(s) that were not resumed within ${live.RESUME_HOURS} hours.`,
+        );
     });
   })
   .catch((error) => {
@@ -1642,19 +1729,263 @@ server.on("error", (error) => {
 });
 
 let stopping = false;
+// Moving a running event to a second site. The bundle carries everything the
+// other site needs to stand the room up on its own: the quiz, the pictures, the
+// scores, the answer journal and the exact question position. Host and display
+// tokens are deliberately left out and minted fresh by the receiving site.
+async function buildLiveExport(g) {
+  const ids = new Set();
+  for (const q of g.questions) if (q.media) ids.add(q.media.split("/").pop());
+  if (g.quiz.music) ids.add(g.quiz.music.split("/").pop());
+  const media = [];
+  for (const id of ids) {
+    const row = await db.prepare("SELECT * FROM media WHERE id=?").get(id);
+    if (!row) continue;
+    try {
+      const bytes = await mediaStore.read(id);
+      media.push({
+        id,
+        mime: row.mime,
+        name: row.name,
+        data: bytes.toString("base64"),
+      });
+    } catch {
+      // A missing picture must never stop the host from rescuing the room.
+      console.error("A media file could not be packed for the game copy.");
+    }
+  }
+  const game = live.serialize(g);
+  delete game.hostToken;
+  delete game.displayToken;
+  delete game.displaySession;
+  return {
+    format: "quizzes-live-export",
+    version: 1,
+    created: Date.now(),
+    source: { organization: g.organization || "", title: g.quiz.title },
+    game,
+    answers: g.history,
+    media,
+  };
+}
+
+async function journalAnswers(code, entries) {
+  await db.prepare("DELETE FROM live_answers WHERE code=?").run(code);
+  for (let i = 0; i < entries.length; i += 200) {
+    const chunk = entries.slice(i, i + 200);
+    const values = chunk.map(() => "(?,?,?)").join(",");
+    const args = [];
+    for (const entry of chunk) args.push(code, entry.seq, JSON.stringify(entry));
+    await db
+      .prepare(
+        "INSERT INTO live_answers (code,seq,document) VALUES " + values,
+      )
+      .run(...args);
+  }
+}
+
+async function importLiveGame(bundle, admin) {
+  if (!bundle || bundle.format !== "quizzes-live-export")
+    fail("That file is not a saved live game.");
+  const saved = bundle.game;
+  if (!saved || saved.format !== "quizzes-live-game" || !saved.quiz)
+    fail("The saved game is incomplete.");
+  const code = String(saved.code || "");
+  if (!/^QZ[A-Z0-9]{6}$/.test(code)) fail("The saved game has an invalid code.");
+  if (
+    games.has(code) ||
+    (await db.prepare("SELECT code FROM live_games WHERE code=?").get(code))
+  )
+    fail(`The code ${code} is already in use on this site.`);
+  if (
+    [...games.values()].filter(
+      (g) => g.adminId === admin.id && g.status !== "ended",
+    ).length >= 3
+  )
+    fail("End an existing game first (maximum 3).");
+
+  // Bring the pictures and the music across, owned by whoever is resuming.
+  const remapped = new Map();
+  const items = Array.isArray(bundle.media) ? bundle.media.slice(0, 80) : [];
+  for (const item of items) {
+    const id = String((item && item.id) || "");
+    if (!/^[a-f0-9-]{8,64}$/.test(id)) continue;
+    let bytes;
+    try {
+      bytes = Buffer.from(String(item.data || ""), "base64");
+    } catch {
+      continue;
+    }
+    if (!bytes.length || bytes.length > 25 * 1024 * 1024) continue;
+    const mime = /^[a-z]+\/[a-z0-9.+-]+$/i.test(String(item.mime || ""))
+      ? String(item.mime)
+      : "application/octet-stream";
+    const fresh = crypto.randomUUID();
+    await mediaStore.write(fresh, bytes, mime);
+    await db.withTransaction(async (tx) => {
+      await tx
+        .prepare("INSERT INTO media (id,mime,name) VALUES (?,?,?)")
+        .run(fresh, mime, String(item.name || "media").slice(0, 120));
+      await tx
+        .prepare("INSERT INTO ownership (kind,item_id,owner_id) VALUES (?,?,?)")
+        .run("media", fresh, admin.id);
+    });
+    remapped.set(id, "/media/" + fresh);
+  }
+  const rewrite = (url) => remapped.get(String(url || "").split("/").pop()) || "";
+
+  const source = saved.quiz;
+  const quiz = await validateQuiz(
+    {
+      title: source.title,
+      description: source.description || "",
+      music: rewrite(source.music),
+      rounds: (source.rounds || []).map((r) => ({
+        title: r.title,
+        questions: (r.questions || []).map((q) => ({
+          ...q,
+          media: rewrite(q.media),
+        })),
+      })),
+    },
+    admin.id,
+  );
+  await db.withTransaction(async (tx) => {
+    await tx
+      .prepare("INSERT INTO quizzes (id,document,updated) VALUES (?,?,?)")
+      .run(quiz.id, JSON.stringify(quiz), Date.now());
+    await tx
+      .prepare("INSERT INTO ownership (kind,item_id,owner_id) VALUES (?,?,?)")
+      .run("quizzes", quiz.id, admin.id);
+  });
+
+  const doc = {
+    ...saved,
+    adminId: admin.id,
+    organization: admin.organization || "",
+    quiz,
+    quizId: quiz.id,
+    imported: true,
+    hostToken: crypto.randomBytes(32).toString("hex"),
+    displayToken: crypto.randomBytes(32).toString("hex"),
+    displaySession: null,
+  };
+  const g = buildRoom(doc);
+  g.history = Array.isArray(bundle.answers) ? bundle.answers : [];
+  g.historySeq = 0;
+  for (const entry of g.history) g.historySeq = entry.seq = g.historySeq + 1;
+  await journalAnswers(code, g.history);
+  games.set(code, g);
+  armRestoredRoom(g);
+  await live.save(g);
+  return {
+    ok: true,
+    code,
+    status: g.status,
+    index: g.index,
+    players: g.players.size,
+    hostToken: g.hostToken,
+    quizId: quiz.id,
+  };
+}
+
+// A room is kept only as long as someone might come back to it. This adopts a
+// saved room into the running process without touching a single rule of play.
+function armRestoredRoom(g) {
+  if (g.status === "question" && g.deadline) {
+    const left = g.deadline - Date.now();
+    if (left > 0) g.timer = setTimeout(() => finishQuestion(g), left);
+    // The question ran out while the site was down: close it now rather than
+    // handing out free seconds to whoever reconnects first.
+    else finishQuestion(g);
+  }
+  if (g.status !== "ended")
+    g.orphanTimer = setTimeout(
+      () =>
+        endGame(
+          g,
+          `No host reconnected within ${Math.round(ORPHAN_MS / 60000)} minutes of a restart`,
+        ).catch(() =>
+          console.error("Could not save the report of an abandoned game."),
+        ),
+      ORPHAN_MS,
+    );
+}
+function buildRoom(doc) {
+  const g = live.restore(doc);
+  g.clients = new Set();
+  g.imageTelemetry = new Map();
+  g.host = null;
+  g.timer = null;
+  g.orphanTimer = null;
+  g.expiry = null;
+  return g;
+}
+async function restoreLiveGames() {
+  let rows;
+  try {
+    rows = await db.prepare("SELECT saved, document FROM live_games").all();
+  } catch {
+    console.error("Could not read saved live games.");
+    return { resumed: 0, retired: 0 };
+  }
+  let resumed = 0;
+  let retired = 0;
+  for (const row of rows) {
+    let doc;
+    try {
+      doc = JSON.parse(row.document);
+    } catch {
+      continue;
+    }
+    if (games.has(doc.code)) continue;
+    let g;
+    try {
+      g = buildRoom(doc);
+    } catch {
+      await live.forget(doc.code).catch(() => {});
+      continue;
+    }
+    // Past its keep-by date: settle it with a report so nothing is lost.
+    const lastSeen = Number(row.saved) || Number(doc.saved) || 0;
+    if (!lastSeen || Date.now() - lastSeen > live.RESUME_MS) {
+      try {
+        await endGame(g, "This game was never resumed after a restart");
+        retired++;
+      } catch {
+        await live.forget(g.code).catch(() => {});
+      }
+      continue;
+    }
+    try {
+      await live.loadAnswers(g);
+    } catch {
+      console.error("Could not read the saved answers of an interrupted game.");
+    }
+    games.set(g.code, g);
+    armRestoredRoom(g);
+    resumed++;
+  }
+  return { resumed, retired };
+}
 async function shutdown() {
   if (stopping) return;
   stopping = true;
   clearInterval(heartbeat);
-  for (const g of games.values()) {
-    try {
-      if (g.status !== "ended") await endGame(g, "Server stopped");
-    } catch {
-      console.error("Could not save an interrupted game.");
-    }
+  for (const [code, g] of games) {
+    clearTimeout(liveSaveTimers.get(code));
+    liveSaveTimers.delete(code);
     clearTimeout(g.expiry);
     clearTimeout(g.orphanTimer);
     clearTimeout(g.timer);
+    // A controlled restart is a pause, not an ending: keep the room so the
+    // same code, scores and question position come back when the site does.
+    if (g.status === "ended") continue;
+    try {
+      await live.save(g);
+    } catch {
+      console.error("Could not save an interrupted game.");
+    }
   }
   for (const ws of wss.clients) ws.terminate();
   server.close(async () => {

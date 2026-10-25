@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#513293" />
     <title>Quizzes · Live learning, together</title>
-    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.10" />
+    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.12" />
   </head>
   <body>
     <div class="app-shell" id="hostApp">
@@ -181,10 +181,22 @@
                   leaderboard after finishing.
                 </p>
               </div>
-              <button id="refreshPublications" class="secondary-btn">
-                Refresh publications
-              </button>
+              <div class="publication-tools">
+                <button id="resumeLiveGame" class="secondary-btn">
+                  Resume a live game
+                </button>
+                <input
+                  id="resumeLiveFile"
+                  type="file"
+                  accept="application/json,.json"
+                  hidden
+                />
+                <button id="refreshPublications" class="secondary-btn">
+                  Refresh publications
+                </button>
+              </div>
             </div>
+            <p class="muted" id="resumeLiveNote" hidden></p>
             <div id="publicationList"></div>
             <section id="deletedPublications" class="recovery-panel" hidden>
               <div class="page-title">
@@ -770,6 +782,12 @@
                 Full screen</button
               ><button class="secondary-btn" id="toggleLeaderboard">
                 Show leaderboard</button
+              ><button
+                class="secondary-btn"
+                id="exportLiveGame"
+                title="Save this running game so it can be resumed on your other site"
+              >
+                Save game copy</button
               ><button class="secondary-btn" id="endGame">End game</button
               ><button class="primary-btn" id="nextQuestion">
                 Start question →
@@ -1118,10 +1136,10 @@ Answer: together</pre
       </p>
       <div id="draftRecoveryList"></div>
     </dialog>
-    <script src="/qr-code.js?v=0.9.0-rc.10"></script>
-    <script src="/quiz-sound.js?v=0.9.0-rc.10"></script>
-    <script src="/app.js?v=0.9.0-rc.10"></script>
-    <script src="/extensions.js?v=0.9.0-rc.10"></script>
-    <script src="/professional.js?v=0.9.0-rc.10"></script>
+    <script src="/qr-code.js?v=0.9.0-rc.12"></script>
+    <script src="/quiz-sound.js?v=0.9.0-rc.12"></script>
+    <script src="/app.js?v=0.9.0-rc.12"></script>
+    <script src="/extensions.js?v=0.9.0-rc.12"></script>
+    <script src="/professional.js?v=0.9.0-rc.12"></script>
   </body>
 </html>

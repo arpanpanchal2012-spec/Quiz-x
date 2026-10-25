@@ -70,6 +70,35 @@
   $("#refreshPublications").onclick = () => {
     if (requireHost()) publications();
   };
+  // Carry a room that was saved on the other site back into this one.
+  const resumeLiveFile = async (file) => {
+    const note = $("#resumeLiveNote");
+    note.hidden = false;
+    if (file.size > 32 * 1024 * 1024) {
+      note.textContent = "That file is too large to be a saved game.";
+      return;
+    }
+    note.textContent = "Reading the saved game…";
+    try {
+      const result = await api("/api/live/import", {
+        method: "POST",
+        body: await file.text(),
+      });
+      note.textContent = `Game ${result.code} resumed ${result.index < 0 ? "from the lobby" : "at question " + (result.index + 1)} with ${result.players} player(s). Opening the host screen…`;
+      window.QuizzesLive?.resume(result.code, result.hostToken);
+    } catch (err) {
+      note.textContent = err.message;
+    }
+  };
+  $("#resumeLiveGame").onclick = () => {
+    if (!requireHost()) return;
+    $("#resumeLiveFile").click();
+  };
+  $("#resumeLiveFile").onchange = () => {
+    const file = $("#resumeLiveFile").files[0];
+    $("#resumeLiveFile").value = "";
+    if (file) resumeLiveFile(file);
+  };
   $("#createInvite").onclick = async () => {
     if (!requireHost()) return;
     $("#createInvite").disabled = true;
