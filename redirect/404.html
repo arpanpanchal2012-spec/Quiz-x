@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Quizzes — connecting…</title>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: radial-gradient(circle at 20% 0%, #2b1b57, #120c26 60%, #0a0716);
+        color: #fff;
+        font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        text-align: center;
+      }
+      main {
+        max-width: 32rem;
+      }
+      .badge {
+        display: inline-grid;
+        place-items: center;
+        width: 56px;
+        height: 56px;
+        margin-bottom: 18px;
+        border-radius: 16px;
+        background: linear-gradient(140deg, #7c5cff, #ff5ea8);
+        font-size: 26px;
+        font-weight: 700;
+      }
+      h1 {
+        margin: 0 0 10px;
+        font-size: 1.35rem;
+        letter-spacing: 0.01em;
+      }
+      p {
+        margin: 0 0 18px;
+        color: #cfc8ea;
+      }
+      .dots::after {
+        content: "";
+        animation: dots 1.2s steps(4, end) infinite;
+      }
+      @keyframes dots {
+        0% { content: ""; }
+        25% { content: "."; }
+        50% { content: ".."; }
+        75% { content: "..."; }
+      }
+      button {
+        padding: 12px 22px;
+        border: 0;
+        border-radius: 999px;
+        background: #fff;
+        color: #1b1035;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      small {
+        display: block;
+        margin-top: 22px;
+        color: #8f86b5;
+      }
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="badge">Q</div>
+      <h1 id="title">Taking you to the quiz<span class="dots"></span></h1>
+      <p id="message">
+        Finding a site that is awake. This takes a second.
+      </p>
+      <button id="retry" class="hidden" type="button">Try again</button>
+      <small id="note"></small>
+    </main>
+    <script>
+      // Point this page at your two deployments. Order matters only when both
+      // are up: the first healthy one wins.
+      const SITES = [
+        "https://quizzes-t8jx.onrender.com", // primary
+        "https://REPLACE-WITH-YOUR-NORTHFLANK-OR-SECOND-RENDER-URL", // backup
+      ];
+      const TIMEOUT_MS = 4000;
+      const LAST_GOOD = "quizzes-last-good-site";
+
+      const $ = (id) => document.getElementById(id);
+      const target = location.pathname + location.search + location.hash;
+
+      function probe(base) {
+        // An opaque no-cors response still tells us the host answered.
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+        return fetch(base + "/healthz?t=" + Date.now(), {
+          mode: "no-cors",
+          cache: "no-store",
+          signal: controller.signal,
+        })
+          .then(() => base)
+          .catch(() => null)
+          .finally(() => clearTimeout(timer));
+      }
+
+      function ordered() {
+        // Prefer whichever site worked last time, so a normal evening does not
+        // wait for a cold site to time out.
+        let last = null;
+        try {
+          last = localStorage.getItem(LAST_GOOD);
+        } catch {}
+        return last && SITES.includes(last)
+          ? [last, ...SITES.filter((s) => s !== last)]
+          : SITES.slice();
+      }
+
+      async function go() {
+        $("title").textContent = "Taking you to the quiz";
+        $("message").textContent =
+          "Finding a site that is awake. This takes a second.";
+        $("retry").classList.add("hidden");
+        const forced = new URLSearchParams(location.search).get("site");
+        const bases = forced
+          ? SITES.filter((s) => s.includes(forced))
+          : ordered();
+        if (!bases.length) return fail();
+        const winner = await Promise.race(
+          bases.map(probe).concat(
+            new Promise((resolve) =>
+              setTimeout(() => resolve(null), TIMEOUT_MS + 500),
+            ),
+          ),
+        );
+        if (!winner) return fail();
+        try {
+          localStorage.setItem(LAST_GOOD, winner);
+        } catch {}
+        location.replace(winner + target);
+      }
+
+      function fail() {
+        $("title").textContent = "Neither site is answering";
+        $("message").textContent =
+          "Both quizzes sites are offline right now. Wait a few seconds and try again — your quiz and results are saved.";
+        $("retry").classList.remove("hidden");
+        $("note").textContent = "If this keeps happening, open the backup site's URL directly.";
+      }
+
+      $("retry").onclick = go;
+      // Give the page a moment to paint before the first probe.
+      setTimeout(go, 150);
+    </script>
+  </body>
+</html>
