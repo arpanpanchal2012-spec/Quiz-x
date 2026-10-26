@@ -253,7 +253,13 @@ module.exports = async function professionalBrowser({ page, browser, errors }) {
   await expect(display.locator("#displayStage")).toContainText(
     "Choose the prime numbers",
   );
+  // Step one: the question alone, no clock and no answers.
+  await expect(phone.locator("#playerTimer")).toHaveText("READY");
+  await expect(phone.locator("#playerOptions button")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Show options/ })).toBeVisible();
+  await page.getByRole("button", { name: /Show options/ }).click();
   await expect(phone.locator("#playerTimer")).toHaveText(/\d+s/);
+  await expect(phone.locator("#playerOptions button")).toHaveCount(4);
   await expect(page.locator("#consoleImages")).toContainText("1 ready");
   await expect(display.locator(".display-media img")).toBeVisible();
   await expect(display.locator(".display-media img")).toHaveJSProperty(
@@ -302,6 +308,9 @@ module.exports = async function professionalBrowser({ page, browser, errors }) {
     "Last question of Round 2",
   );
   await page.getByRole("button", { name: "Start last question" }).click();
+  // The typed-answer box arrives with the second press, like the tiles do.
+  await expect(phone.locator("#textAnswerForm")).toBeHidden();
+  await page.getByRole("button", { name: /Show options/ }).click();
   await expect(phone.locator("#textAnswerForm")).toBeVisible();
   await page.locator("#endGame").click();
   await expect(display.locator("#displayStage")).toContainText(

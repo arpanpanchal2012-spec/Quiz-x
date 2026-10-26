@@ -316,9 +316,15 @@ test(
           host.client.send("next_question");
           const started = await players[0].wait("question_started");
           assert.equal(started.game.status, "question");
-          assert.ok(started.game.deadline > Date.now(), "timer is back");
+          assert.equal(started.game.deadline, null, "no clock during the read-out");
+          assert.deepEqual(started.question.options, [], "options are not sent yet");
           assert.equal(started.question.type, "choice");
           assert.ok(!("correct" in started.question));
+          host.client.send("show_options");
+          const shown = await players[0].wait("options_shown");
+          assert.ok(shown.game.deadline > Date.now(), "timer is back");
+          assert.ok(shown.question.options.length >= 2, "options arrive with it");
+          assert.equal(shown.question.optionsVisible, true);
           // Drop anything left over from the buzzer question so the assertions
           // below can only be satisfied by this question's own results.
           players[0].inbox.length = 0;

@@ -577,7 +577,12 @@ test(
           const secret = await host.wait("host_console");
           assert.equal(secret.currentNotes, "SECRET HOST NOTE");
           assert.equal(secret.next.text, "SECRET UPCOMING QUESTION");
-          assert.ok(active.game.deadline > Date.now());
+          assert.equal(active.game.deadline, null, "the read-out carries no clock");
+          assert.deepEqual(active.question.options, [], "no answers yet");
+          host.send("show_options");
+          const opened = await player.wait("options_shown");
+          assert.ok(opened.game.deadline > Date.now());
+          assert.ok(opened.question.options.length >= 2);
           for (const peer of [display, player]) {
             const data = JSON.stringify(peer.history);
             assert.ok(!data.includes("SECRET"));
@@ -594,7 +599,7 @@ test(
           });
           const resumed = await reconnected.wait("display_joined");
           assert.equal(resumed.question.text, "Current question");
-          assert.equal(resumed.game.deadline, active.game.deadline);
+          assert.equal(resumed.game.deadline, opened.game.deadline);
           assert.ok(!JSON.stringify(resumed).includes("SECRET"));
           host.send("reveal_answers");
           assert.equal(
@@ -707,7 +712,10 @@ test(
           host.send("start_question");
           const q = await p.wait("question_started");
           assert.ok(Date.now() - began < 2000);
-          const deadline = q.game.deadline;
+          host.send("show_options");
+          const opened = await p.wait("options_shown");
+          const deadline = opened.game.deadline;
+          assert.ok(deadline > Date.now(), "the clock starts when the options do");
           await host.wait("host_console");
           p.send("image_status", {
             questionId: q.question.id,

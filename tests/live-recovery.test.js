@@ -215,10 +215,14 @@ test(
           players.push(p);
         }
         host.send("next_question");
+        for (const p of players) await p.wait("question_started");
+        host.send("show_options");
+        const shown = await players[0].wait("options_shown");
+        assert.ok(shown.game.deadline > Date.now(), "the clock starts with the options");
+        const questionId = shown.question.id;
         for (const p of players) {
-          const started = await p.wait("question_started");
           p.send("submit_answer", {
-            questionId: started.question.id,
+            questionId,
             answer: 0,
           });
           await p.wait("answer_received");

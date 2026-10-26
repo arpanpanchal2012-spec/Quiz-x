@@ -352,6 +352,8 @@ test(
             ).res.status,
             404,
           );
+          host.send("show_options");
+          await player.wait("options_shown");
           player.send("submit_answer", {
             questionId: started.question.id,
             answer: [0],

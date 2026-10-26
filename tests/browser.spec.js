@@ -14,6 +14,17 @@ async function advanceHost(page, expectedLabel) {
     await page.getByRole("button", { name: "Start last question" }).click();
     await expect.poll(() => page.evaluate(() => game.status)).toBe("question");
   }
+  // A question arrives on its own; the host's second press brings the options.
+  if (
+    await page.evaluate(
+      () => game.status === "question" && game.optionsVisible === false,
+    )
+  ) {
+    await page.getByRole("button", { name: /Show options/ }).click();
+    await expect
+      .poll(() => page.evaluate(() => game.optionsVisible))
+      .toBe(true);
+  }
 }
 
 test("Host editor and a separate mobile player complete a saved multimedia quiz", async ({

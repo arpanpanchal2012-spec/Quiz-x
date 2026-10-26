@@ -202,8 +202,10 @@ test("a lost tab never ends a live event", { timeout: 120000 }, async (t) => {
       await p2.wait("joined");
 
       h.send("next_question");
-      const started = await p.wait("question_started");
-      p.send("submit_answer", { questionId: started.question.id, answer: 0 });
+      await p.wait("question_started");
+      h.send("show_options");
+      const opened = await p.wait("options_shown");
+      p.send("submit_answer", { questionId: opened.question.id, answer: 0 });
       await p.wait("answer_received");
       // Close every browser tab: the tokens that lived in them are gone.
       h.close();

@@ -155,7 +155,11 @@ test(
       host.send("start_question");
       const current = await player.wait("question_started");
       assert.equal(current.game.status, "question");
-      assert.ok(current.game.deadline > Date.now() + 115000); // No image-readiness barrier.
+      assert.equal(current.game.deadline, null, "the read-out step has no clock");
+      host.send("show_options");
+      const shown = await player.wait("options_shown");
+      // No image-readiness barrier: the image is fetched alongside the clock.
+      assert.ok(shown.game.deadline > Date.now() + 115000);
       await Promise.all(
         Array.from({ length: 100 }, () => image(current.question.media)),
       );

@@ -327,6 +327,19 @@ test(
           assert.equal(started.question.text, "Two plus two?");
           assert.ok(!("correct" in started.question));
           assert.ok(!("accepted" in started.question));
+          // Step one is the question alone, with no clock and no options.
+          assert.deepEqual(started.question.options, []);
+          assert.equal(started.game.deadline, null);
+          player.send("submit_answer", {
+            questionId: started.question.id,
+            answer: 0,
+          });
+          assert.match(
+            (await player.wait("error")).message,
+            /options are not on screen/i,
+          );
+          host.send("show_options");
+          assert.ok((await player.wait("options_shown")).game.deadline > Date.now());
           player.send("submit_answer", {
             questionId: started.question.id,
             answer: 0,
@@ -351,6 +364,8 @@ test(
           host.send("next_question");
           const tf = await player.wait("question_started");
           assert.equal(tf.question.type, "boolean");
+          host.send("show_options");
+          await player.wait("options_shown");
           player.send("submit_answer", {
             questionId: tf.question.id,
             answer: 1,
@@ -390,6 +405,8 @@ test(
           const q = await player.wait("question_started");
           assert.equal(q.question.type, "text");
           assert.ok(!("accepted" in q.question));
+          host.send("show_options");
+          await player.wait("options_shown");
           player.send("submit_answer", {
             questionId: "old-question",
             answer: "wrong",
@@ -433,9 +450,11 @@ test(
           assert.match((await extra.wait("error")).message, /full/);
           extra.ws.close();
           h.send("start_question");
+          await Promise.all(players.map((c) => c.wait("question_started")));
+          h.send("show_options");
           await Promise.all(
             players.map(async (c) => {
-              const q = await c.wait("question_started");
+              const q = await c.wait("options_shown");
               c.send("submit_answer", { questionId: q.question.id, answer: 0 });
               await c.wait("answer_received");
             }),

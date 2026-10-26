@@ -198,6 +198,8 @@ test(
           host.client.send("start_question");
           const started = await observer.wait("question_started");
           assert.equal(started.question.text, "Question 1?");
+          host.client.send("show_options");
+          await observer.wait("options_shown");
           for (const p of players)
             p.send("submit_answer", {
               questionId: started.question.id,

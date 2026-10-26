@@ -294,7 +294,15 @@ test("every player is given a face of their own", { timeout: 60000 }, async (t) 
         if (m.type === "question_started") started = m;
       }
       assert.ok(started, "the question never started");
-      const questionId = started.question.id;
+      assert.deepEqual(started.question.options, [], "the read-out step hides them");
+      assert.equal(started.game.deadline, null, "and carries no clock");
+      host.send("show_options");
+      const opened = await host.wait("options_shown");
+      assert.ok(opened.game.deadline > Date.now(), "the clock starts with the options");
+      assert.equal(opened.game.optionsVisible, true);
+      const questionId = opened.question.id;
+      // The two steps are named in the audit trail the host can see.
+      assert.equal(opened.game.status, "question");
       for (const p of sockets)
         p.send("submit_answer", { questionId, answer: 0 });
       await new Promise((r) => setTimeout(r, 500));
