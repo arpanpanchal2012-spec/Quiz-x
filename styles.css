@@ -6527,39 +6527,6 @@ body.assigned-quiz {
    answer distribution the room sees after every question.
    ========================================================================= */
 
-.avatar-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  font-size: 16px;
-  line-height: 1;
-  background: #f0edff;
-  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.7);
-  user-select: none;
-}
-.avatar-badge.mint { background: #d9f6e8; }
-.avatar-badge.sun { background: #fdeec4; }
-.avatar-badge.sky { background: #dbeafe; }
-.avatar-badge.rose { background: #fde2e7; }
-.avatar-badge.lilac { background: #e9e3ff; }
-.avatar-badge.sand { background: #f6e8d8; }
-.avatar-badge.avatar-large {
-  width: 58px;
-  height: 58px;
-  font-size: 32px;
-  box-shadow: inset 0 0 0 3px rgb(255 255 255 / 0.8), 0 6px 18px rgb(30 20 60 / 0.12);
-}
-.avatar-badge.avatar-podium {
-  width: 54px;
-  height: 54px;
-  font-size: 30px;
-  margin: 0 auto 8px;
-}
-
 /* Who is in the room, before the first question. */
 .join-wall {
   display: flex;
@@ -6610,7 +6577,7 @@ body.assigned-quiz {
   }
 }
 
-/* The player's own face and name. */
+/* The player's own character and name. */
 .player-identity {
   display: flex;
   align-items: center;
@@ -6836,11 +6803,6 @@ body.reordering {
   align-items: center;
   gap: 14px;
 }
-.display-standings .avatar-badge {
-  width: 40px;
-  height: 40px;
-  font-size: 22px;
-}
 .display-answer-bar i.is-empty {
   height: 14px;
   width: 0;
@@ -6863,10 +6825,9 @@ body.reordering {
   white-space: nowrap;
   font-weight: 800;
 }
-.player-chip .avatar-badge {
-  width: 26px;
-  height: 26px;
-  font-size: 15px;
+.player-chip .kchar-holder {
+  width: 20px;
+  height: 40px;
 }
 .player-meta {
   align-items: center;
@@ -6913,80 +6874,20 @@ body.reordering {
   gap: 12px;
 }
 
-/* ===== rc.17 — the faces move, and the start is two presses ==============
-   Kahoot's characters are alive; ours should be too. Only transforms are
-   animated, so a room of a hundred phones stays smooth.
+/* ===== rc.17 — the start is two presses ==================================
+   A question lands, then the answers follow it in.
    ======================================================================= */
 
-@keyframes avatarBob {
-  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
-  35% { transform: translateY(-4px) rotate(-4deg) scale(1.03); }
-  70% { transform: translateY(-1px) rotate(3deg) scale(1); }
+/* Someone arriving is worth noticing. */
+.join-chip.just-joined {
+  animation: popIn 0.35s cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
-@keyframes avatarSway {
-  0%, 100% { transform: rotate(-6deg) translateY(0); }
-  50% { transform: rotate(6deg) translateY(-2px); }
-}
-@keyframes avatarHop {
-  0% { transform: translateY(0) scale(1); }
-  25% { transform: translateY(-7px) scale(1.1) rotate(-6deg); }
-  50% { transform: translateY(0) scale(0.98); }
-  70% { transform: translateY(-3px) scale(1.04) rotate(4deg); }
-  100% { transform: translateY(0) scale(1); }
-}
-@keyframes avatarPop {
+@keyframes popIn {
   from { transform: scale(0.4); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
-
-.avatar-badge {
-  animation: avatarBob 2.6s ease-in-out infinite;
-  animation-delay: var(--phase, 0s);
-  will-change: transform;
-  transition: transform 0.18s ease-out;
-}
-.avatar-badge[data-beat="2"] { animation-name: avatarSway; animation-duration: 3.2s; }
-.avatar-badge[data-beat="3"] { animation-duration: 2.1s; }
-
-/* The player's own face is the biggest thing on their phone: it breathes. */
-.avatar-badge.avatar-large {
-  animation: avatarBob 2.2s ease-in-out infinite;
-  animation-delay: var(--phase, 0s);
-}
-
-/* Someone arriving is worth noticing. */
-.join-chip.just-joined .avatar-badge {
-  animation: avatarHop 0.9s ease-out 2, avatarBob 2.6s ease-in-out 1.8s infinite;
-}
-.join-chip.just-joined {
-  animation: avatarPop 0.35s cubic-bezier(0.2, 0.8, 0.3, 1) both;
-}
-
-/* A face reacts when the host points at it. */
-.join-chip:hover .avatar-badge,
-.leaderboard li:hover .avatar-badge {
-  animation: avatarHop 0.7s ease-out 1;
-}
-
-/* Standings and podium: a slow sway so the board is never static. */
-.podium .avatar-badge {
-  animation: avatarHop 1.6s ease-in-out infinite;
-  animation-play-state: paused;
-}
-.display-standings li .avatar-badge {
-  animation-duration: 3.4s;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .avatar-badge,
-  .avatar-badge.avatar-large,
-  .display-standings li .avatar-badge {
-    animation: none;
-  }
-  .join-chip.just-joined,
-  .join-chip.just-joined .avatar-badge {
-    animation: none;
-  }
+  .join-chip.just-joined { animation: none; }
 }
 
 /* Step one of a question: the text, on its own. */
@@ -7002,7 +6903,7 @@ body.reordering {
   color: #5c4f79;
   font-size: 16px;
   font-weight: 600;
-  animation: avatarPop 0.3s ease-out both;
+  animation: popIn 0.3s ease-out both;
 }
 .readout-note span {
   font-size: 26px;
@@ -7022,29 +6923,9 @@ body.reordering {
   text-align: center;
 }
 
-/* The lobby face is the hero of the phone screen. */
-.avatar-badge.avatar-hero {
-  width: 96px;
-  height: 96px;
-  font-size: 54px;
-  animation: avatarHero 3.2s ease-in-out infinite;
-  animation-delay: var(--phase, 0s);
-  box-shadow:
-    inset 0 0 0 4px rgb(255 255 255 / 0.85),
-    0 12px 28px rgb(30 20 60 / 0.16);
-}
-@keyframes avatarHero {
-  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
-  30% { transform: translateY(-7px) rotate(-5deg) scale(1.05); }
-  60% { transform: translateY(0) rotate(4deg) scale(1.02); }
-}
-.player-identity .avatar-badge.avatar-hero {
+/* The lobby character is the hero of the phone screen. */
+.player-identity .kchar-hero {
   margin: 2px 0;
-}
-@media (prefers-reduced-motion: reduce) {
-  .avatar-badge.avatar-hero {
-    animation: none;
-  }
 }
 
 /* Every round's clock, in one list. */
@@ -7275,4 +7156,238 @@ body.reordering {
 }
 @media (prefers-reduced-motion: reduce) {
   .display-chart-track i { transition: none; }
+}
+
+/* ===== rc.19 — play as a character, and a reveal screen of its own ========
+   Every player picks a character and an accessory when they join. The drawing
+   and the bounce live in characters.css; this block only decides how big the
+   figure is in each place it appears, and gives the answer bars a stage where
+   nothing else is on screen.
+   ======================================================================= */
+
+.kchar-holder {
+  display: inline-block;
+  width: 26px;
+  height: 52px;
+  line-height: 0;
+}
+.kchar-holder .kchar {
+  width: 100%;
+  height: 100%;
+}
+.kchar-holder.kchar-hero {
+  width: 92px;
+  height: 184px;
+}
+.player-identity {
+  gap: 14px;
+}
+.player-identity b {
+  font-size: 20px;
+}
+
+/* --- the picker on the join screen -------------------------------------- */
+.char-picker {
+  margin: 4px 0 2px;
+  text-align: left;
+}
+.char-preview {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 0;
+}
+.char-preview .kchar-hero {
+  width: clamp(56px, 13vh, 84px);
+  height: clamp(112px, 26vh, 168px);
+}
+.char-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 6px 0 8px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #f1ecff;
+}
+.char-tabs button {
+  border: 0;
+  border-radius: 9px;
+  padding: 10px 8px;
+  background: transparent;
+  color: #5a4f70;
+  font: inherit;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+}
+.char-tabs button[aria-selected="true"] {
+  background: #fff;
+  color: #2c2438;
+  box-shadow: 0 2px 8px rgb(60 40 110 / 0.14);
+}
+.char-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+.char-grid[hidden] {
+  display: none;
+}
+.char-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+}
+.char-actions .primary-btn {
+  flex: 1;
+}
+.char-note {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: #6b5f85;
+  text-align: center;
+}
+
+/* --- the reveal has the stage to itself --------------------------------- */
+.stage-results {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 0 20px;
+}
+.stage-results[hidden] {
+  display: none;
+}
+.stage-chart {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0;
+  gap: 16px;
+}
+.stage-chart .chart-track {
+  height: clamp(150px, 32vh, 320px);
+  border-radius: 14px;
+}
+.stage-chart .chart-count {
+  font-size: 30px;
+}
+.stage-chart .chart-bar {
+  width: min(120px, 78%);
+}
+.stage-chart .chart-symbol {
+  font-size: 20px;
+}
+/* While the bars are up, the question page is gone: no text, no answers, no
+   media, no caption, not even the music bar. One screen, one idea. */
+#gameModal .stage-question.bars-only > :not(#resultsStage) {
+  display: none !important;
+}
+#gameModal .stage-question.bars-only {
+  justify-content: center;
+}
+#gameModal .stage-question.bars-only > #resultsStage {
+  width: 100%;
+}
+/* The round pill and the host's music bar belong to the question page too. */
+#gameModal[data-bars="on"] .stage-top,
+#gameModal[data-bars="on"] #hostSound,
+#gameModal[data-bars="on"] #lobbyMusic {
+  display: none;
+}
+@media (max-height: 820px) {
+  .stage-chart .chart-track { height: 150px; }
+  .stage-results { padding-bottom: 10px; }
+}
+@media (max-width: 720px) {
+  .char-grid { gap: 4px; }
+  .kchar-holder.kchar-hero { width: 76px; height: 152px; }
+  .stage-chart .chart-track { height: clamp(120px, 26vh, 200px); }
+  .stage-chart .chart-count { font-size: 22px; }
+}
+
+/* The audience reveal: columns on an empty stage, chrome hidden. */
+.display-reveal-stage {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  min-height: 100%;
+}
+.display-reveal-stage .display-chart {
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+.display-reveal-stage .display-chart-track {
+  height: clamp(220px, 44vh, 560px);
+}
+.display-reveal-stage .display-chart-count {
+  font-size: clamp(30px, 3.2vw, 56px);
+}
+.display-reveal-stage .display-chart-symbol,
+.display-reveal-stage .display-chart-share {
+  font-size: clamp(20px, 1.8vw, 32px);
+}
+.projector-page.is-reveal .projector-head,
+.projector-page.is-reveal .projector-footer {
+  display: none;
+}
+.projector-page.is-reveal .projector-stage {
+  padding: 4vh 4vw;
+}
+
+/* Names carry the lobby now that the faces are phone-only: give them room. */
+#gameModal .join-chip {
+  padding: 9px 18px;
+  font-size: 16px;
+  max-width: 320px;
+}
+#gameModal .join-wall {
+  gap: 10px;
+  margin-top: 10px;
+}
+/* The player's own character stands over their name on their phone. */
+.player-identity {
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px 10px;
+}
+.player-identity .kchar-hero {
+  width: 104px;
+  height: 208px;
+}
+.player-identity b {
+  font-size: 21px;
+}
+
+/* The phone puts the split under the answer text, never beside it. A small
+   grid keeps that true whatever the phone font sizing has done to the tile. */
+#playerOptions .p-answer {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-areas:
+    "shape copy"
+    "bar bar";
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 6px;
+}
+#playerOptions .p-answer .answer-shape {
+  grid-area: shape;
+  margin: 0;
+}
+#playerOptions .p-answer .answer-copy {
+  grid-area: copy;
+  min-width: 0;
+}
+#playerOptions .p-answer .answer-bar {
+  grid-area: bar;
+  flex: 0 0 auto;
+  width: 100%;
+  margin-top: 0;
+}
+#playerOptions .p-answer .answer-bar b {
+  font-size: 15px;
 }

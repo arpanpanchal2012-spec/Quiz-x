@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#513293" />
     <title>Quizzes · Live learning, together</title>
-    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.18" />
+    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.19" />
+    <link rel="stylesheet" href="/characters.css?v=0.9.0-rc.19" />
   </head>
   <body>
     <div class="app-shell" id="hostApp">
@@ -582,6 +583,18 @@
                     sees how the room is answering — not players, not the
                     projector, not the host
                   </dd>
+                  <dt>Characters</dt>
+                  <dd>
+                    12 characters and 14 accessories, drawn in code — 168
+                    combinations, no downloads. They appear on the player's own
+                    phone only; the host screen and projector show nicknames and
+                    numbers, never faces
+                  </dd>
+                  <dt>Answer bars</dt>
+                  <dd>
+                    The reveal gets a screen of its own: columns and counts, with
+                    the question, the options and the media off screen
+                  </dd>
                   <dt>Question start</dt>
                   <dd>
                     Two presses — the question, then the options. No clock runs
@@ -866,12 +879,6 @@
                   <b id="liveAnswerMeter">0</b><span>Answers</span>
                 </div>
               </div>
-              <div
-                class="answer-chart"
-                id="hostAnswerChart"
-                aria-hidden="true"
-                hidden
-              ></div>
               <div class="answer-grid" id="hostOptions"></div>
               <p class="answer-summary" id="hostAnswerSummary" hidden></p>
               <section
@@ -904,6 +911,14 @@
                   Reveal answer · no winner
                 </button>
               </section>
+            <section
+              class="stage-results"
+              id="resultsStage"
+              aria-label="Answer results"
+              hidden
+            >
+              <div class="answer-chart stage-chart" id="resultsChart" aria-hidden="true"></div>
+            </section>
               <div id="hostResults"></div>
               <section
                 id="hostLeaderboard"
@@ -1015,8 +1030,56 @@
               type="submit"
               id="joinGameBtn"
             >
-              Join game →
+              Choose your character →
             </button>
+            <section id="charPicker" class="char-picker" hidden>
+              <div class="eyebrow">WHO ARE YOU PLAYING AS?</div>
+              <div class="char-preview" id="charPreview"></div>
+              <div class="char-tabs" role="tablist" aria-label="Pick a character or an accessory">
+                <button
+                  type="button"
+                  role="tab"
+                  id="charTabCharacter"
+                  data-char-tab="character"
+                  aria-selected="true"
+                  aria-controls="charGrid"
+                >
+                  Character
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="charTabAccessory"
+                  data-char-tab="accessory"
+                  aria-selected="false"
+                  aria-controls="accessoryGrid"
+                >
+                  Accessory
+                </button>
+              </div>
+              <div
+                class="char-grid"
+                id="charGrid"
+                role="group"
+                aria-label="Choose a character"
+              ></div>
+              <div
+                class="char-grid"
+                id="accessoryGrid"
+                role="group"
+                aria-label="Choose an accessory"
+                hidden
+              ></div>
+              <div class="char-actions">
+                <button type="button" class="text-btn" id="charBack">← Back</button>
+                <button type="button" class="primary-btn" id="joinConfirm">
+                  Join game →
+                </button>
+              </div>
+              <p class="char-note" id="charNote" role="status">
+                Your character shows on your own phone during the game.
+              </p>
+            </section>
             <p class="form-status" id="joinStatus" role="alert"></p>
             <small class="join-note"
               >No account needed · Your host can see your nickname, answers and
@@ -1036,7 +1099,7 @@
               ><b id="playerTimer" role="timer"></b>
             </div>
             <div class="player-identity" id="playerIdentity" hidden>
-              <span class="avatar-badge avatar-large" id="playerAvatar"></span>
+              <div class="char-hero" id="playerAvatar" aria-hidden="true"></div>
               <b id="playerName"></b>
             </div>
             <h2 id="playerTitle">You’re in!</h2>
@@ -1289,10 +1352,11 @@ Answer: together</pre
       </p>
       <div id="draftRecoveryList"></div>
     </dialog>
-    <script src="/qr-code.js?v=0.9.0-rc.18"></script>
-    <script src="/quiz-sound.js?v=0.9.0-rc.18"></script>
-    <script src="/app.js?v=0.9.0-rc.18"></script>
-    <script src="/extensions.js?v=0.9.0-rc.18"></script>
-    <script src="/professional.js?v=0.9.0-rc.18"></script>
+    <script src="/qr-code.js?v=0.9.0-rc.19"></script>
+    <script src="/quiz-sound.js?v=0.9.0-rc.19"></script>
+    <script src="/characters.js?v=0.9.0-rc.19"></script>
+    <script src="/app.js?v=0.9.0-rc.19"></script>
+    <script src="/extensions.js?v=0.9.0-rc.19"></script>
+    <script src="/professional.js?v=0.9.0-rc.19"></script>
   </body>
 </html>

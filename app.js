@@ -294,7 +294,7 @@ function summary(q) {
 }
 function leaderboardHTML(rows) {
   return rows.length
-    ? `<ol class="leaderboard">${rows.map((p) => `<li>${avatarHTML(p)}<b class="rank">${p.rank}</b><span>${e(p.name)}</span><strong>${p.score.toLocaleString()} <small>pts</small></strong></li>`).join("")}</ol>`
+    ? `<ol class="leaderboard">${rows.map((p) => `<li><b class="rank">${p.rank}</b><span>${e(p.name)}</span><strong>${p.score.toLocaleString()} <small>pts</small></strong></li>`).join("")}</ol>`
     : '<p class="muted">No participants in this session.</p>';
 }
 document.addEventListener("click", async (event) => {
@@ -488,26 +488,19 @@ function mediaHTML(url, type, lazy = false) {
     ? `<img class="question-media" ${lazy ? 'loading="lazy"' : 'loading="eager" fetchpriority="high"'} decoding="async" src="${e(url)}" alt="Question image">`
     : `<audio controls preload="metadata" src="${e(url)}" class="question-audio"></audio>`;
 }
-// Each player is given a face by the server when they join. It travels with
-// their seat, so it is the same face in the lobby, on their phone and in the
-// final standings.
-const AVATAR_TINTS = ["mint", "sun", "sky", "rose", "lilac", "sand"];
-function avatarTint(value) {
-  let hash = 0;
-  for (const c of String(value || "")) hash = (hash * 31 + c.codePointAt(0)) % 997;
-  return AVATAR_TINTS[hash % AVATAR_TINTS.length];
+// Who each player is. They pick a character and an accessory when they join;
+// characters.js draws both from plain SVG, so the same player looks the same on
+// their phone at every stage of the night — and nothing is downloaded.
+// The face never appears on the host screen or the projector: those show names
+// and numbers only, so the room watches the quiz, not a wall of cartoons.
+const KCHARS = window.QuizzesCharacters || null;
+function characterSVG(player, className = "") {
+  if (!KCHARS) return "";
+  return `<span class="kchar-holder ${className}">${KCHARS.render(player?.character, player?.accessory)}</span>`;
 }
-// The faces move. Each one sways to its own slow rhythm — a different rhythm
-// per player, so a lobby full of people looks alive rather than choreographed.
-function avatarRhythm(seed) {
-  let hash = 0;
-  for (const c of String(seed || "")) hash = (hash * 31 + c.codePointAt(0)) % 997;
-  return { phase: `-${(hash % 20) / 10}s`, beat: (hash % 3) + 1 };
-}
-function avatarHTML(player, extra = "") {
-  const face = player?.avatar || "🙂";
-  const { phase, beat } = avatarRhythm(`${face}${player?.name || ""}`);
-  return `<span class="avatar-badge ${avatarTint(face)}${extra ? " " + extra : ""}" style="--phase:${phase}" data-beat="${beat}" aria-hidden="true">${e(face)}</span>`;
+// A tiny copy for headers and lists on the player's own phone.
+function characterChip(player, className = "kchar-chip") {
+  return characterSVG(player, className);
 }
 let activeEditorQuestion = null;
 // One clock per round. A round almost always wants the same time on every
@@ -1274,6 +1267,7 @@ function openSocket(initial) {
     } else {
       connectionText("Disconnected. Join or launch a game to try again.");
       $("#joinGameBtn").disabled = false;
+      $("#joinConfirm").disabled = false;
     }
   };
 }
@@ -1560,6 +1554,7 @@ function handleMessage(m) {
     if (participantMode) {
       $("#joinStatus").textContent = m.message;
       $("#joinGameBtn").disabled = false;
+      $("#joinConfirm").disabled = false;
       if (!game) {
         forgetConnection();
         manualClose = true;
@@ -2047,10 +2042,13 @@ $("#textAnswerForm").onsubmit = (event) => {
 };
 // The room's answers as columns above the answer tiles — only ever drawn once
 // the answers are revealed. Nothing shows while people are still choosing.
+// The reveal gets the stage to itself. No question text, no answer tiles, no
+// media, no "correct answer" caption — just the columns and their counts, so
+// the room reads one thing at a time.
 function drawAnswerChart(result, counts, votes) {
-  const chart = $("#hostAnswerChart");
-  const grid = $("#hostOptions");
-  if (!chart || !grid || !liveQuestion) return;
+  const chart = $("#resultsChart");
+  const stage = $("#resultsStage");
+  if (!chart || !stage || !liveQuestion) return;
   const options = liveQuestion.options || [];
   const correctIndices = new Set(result?.correctIndices || []);
   const tallest = Math.max(1, ...options.map((_, i) => counts[i] || 0));
@@ -2067,18 +2065,25 @@ function drawAnswerChart(result, counts, votes) {
       </div>`;
     })
     .join("");
-  chart.hidden = false;
+  stage.hidden = false;
+  // Nothing else shares the stage while the bars are up.
+  $("#gameModal .stage-question").classList.add("bars-only");
+  $("#gameModal").dataset.bars = "on";
   // Let the bars grow from the baseline rather than appear at full height.
   requestAnimationFrame(() => {
-    chart.classList.add("is-drawn");
+    stage.classList.add("is-drawn");
   });
 }
 function hideAnswerChart() {
-  const chart = $("#hostAnswerChart");
-  if (!chart) return;
-  chart.hidden = true;
-  chart.classList.remove("is-drawn");
-  chart.innerHTML = "";
+  const chart = $("#resultsChart");
+  const stage = $("#resultsStage");
+  if (stage) {
+    stage.hidden = true;
+    stage.classList.remove("is-drawn");
+  }
+  if (chart) chart.innerHTML = "";
+  $("#gameModal .stage-question")?.classList.remove("bars-only");
+  delete $("#gameModal").dataset.bars;
 }
 function renderResults(result) {
   stopQuestionAudio();
@@ -2224,7 +2229,7 @@ function renderJoinWall() {
     ? `<div class="join-wall" aria-label="${seated.length} players ready">${seated
         .map(
           (p) =>
-            `<div class="join-chip${p.connected ? "" : " is-away"}${fresh.has(p.id) ? " just-joined" : ""}">${avatarHTML(p)}<span>${e(p.name)}</span></div>`,
+            `<div class="join-chip${p.connected ? "" : " is-away"}${fresh.has(p.id) ? " just-joined" : ""}"><span>${e(p.name)}</span></div>`,
         )
         .join("")}</div>${game.participants.length > 60 ? `<p class="muted">and ${game.participants.length - 60} more</p>` : ""}`
     : `<div class="join-wall is-empty"><span class="join-wall-face" aria-hidden="true">🎟️</span><p>Waiting for the first player. Share the join link or the code above.</p></div>`;
@@ -2236,29 +2241,19 @@ function renderIdentity() {
   const chip = $("#playerChip");
   if (!box || !chip) return;
   const me = game.participants.find((p) => p.id === myPlayerId);
-  // The big card belongs to the lobby, where there is room to show it off.
-  // While a question is running the phone stays tight: the same face and name
-  // ride along in the header line, where Kahoot puts them too.
+  // The big character belongs to the lobby, where there is room to show it off.
+  // While a question is running the phone stays tight: the same character and
+  // name ride along in the header line instead.
   const roomy = ["lobby", "round_intro", "last_question_intro", "ended"].includes(
     game.status,
   );
   box.hidden = !me || !roomy;
   chip.hidden = !me || roomy;
   if (!me) return;
-  $("#playerAvatar").textContent = me.avatar || "🙂";
-  // In the lobby the face is the hero of the screen: big enough to wave at.
-  $("#playerAvatar").className =
-    "avatar-badge avatar-large" +
-    (roomy ? " avatar-hero" : "") +
-    " " +
-    avatarTint(me.avatar);
-  $("#playerAvatar").style.setProperty(
-    "--phase",
-    avatarRhythm(`${me.avatar}${me.name}`).phase,
-  );
+  $("#playerAvatar").innerHTML = characterSVG(me, "kchar-hero is-idle");
   $("#playerName").textContent = me.name;
   chip.className = "player-chip";
-  chip.innerHTML = `${avatarHTML(me)}<b>${e(me.name)}</b>`;
+  chip.innerHTML = `${characterChip(me)}<b>${e(me.name)}</b>`;
 }
 setInterval(() => {
   if (!game) return;
@@ -2417,19 +2412,123 @@ $("#copyJoin").onclick = async () => {
     showToast("Copy the link from Open player view.");
   }
 };
-$("#joinPanel").onsubmit = (event) => {
-  event.preventDefault();
+// --- the character picker on the join screen -----------------------------
+// Two grids, one preview. The choice is kept on this device so a player who
+// comes back next week is the same animal in the same hat.
+const CHARACTER_STORE = "quizzes.player.look";
+function storedLook() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CHARACTER_STORE) || "{}");
+    return {
+      character: KCHARS?.CHARACTER_IDS.includes(saved.character)
+        ? saved.character
+        : (KCHARS?.pick() || "bear"),
+      accessory: KCHARS?.ACCESSORY_IDS.includes(saved.accessory)
+        ? saved.accessory
+        : "none",
+    };
+  } catch {
+    return { character: KCHARS?.CHARACTER_IDS[0] || "bear", accessory: "none" };
+  }
+}
+let look = storedLook();
+let lookTab = "character";
+function saveLook() {
+  try {
+    localStorage.setItem(CHARACTER_STORE, JSON.stringify(look));
+  } catch {
+    /* private mode: the picker still works for this game */
+  }
+}
+function renderLookPicker() {
+  const grid = $("#charGrid");
+  const accessories = $("#accessoryGrid");
+  const preview = $("#charPreview");
+  if (!grid || !accessories || !preview || !KCHARS) return;
+  preview.innerHTML = characterSVG(look, "kchar-hero is-idle");
+  grid.innerHTML = KCHARS.CHARACTERS.map(
+    (c) =>
+      `<button type="button" class="kchar-tile" data-character="${c.id}" aria-pressed="${c.id === look.character}">${KCHARS.render(c.id, "none", { label: false })}<span>${e(c.label)}</span></button>`,
+  ).join("");
+  accessories.innerHTML = KCHARS.ACCESSORIES.map(
+    (a) =>
+      `<button type="button" class="accessory-tile" data-accessory="${a.id}" aria-pressed="${a.id === look.accessory}" aria-label="${e(a.label)}" title="${e(a.label)}">${KCHARS.render(look.character, a.id, { label: false, head: true })}</button>`,
+  ).join("");
+  $("#charTabCharacter").setAttribute("aria-selected", String(lookTab === "character"));
+  $("#charTabAccessory").setAttribute("aria-selected", String(lookTab === "accessory"));
+  grid.hidden = lookTab !== "character";
+  accessories.hidden = lookTab !== "accessory";
+  $("#charNote").textContent =
+    lookTab === "character"
+      ? "Your character shows on your own phone during the game."
+      : "Tap an accessory to wear it. “No accessory” is fine too.";
+}
+function openLookPicker() {
+  const picker = $("#charPicker");
+  if (!picker || !KCHARS) return;
+  picker.hidden = false;
+  $("#joinGameBtn").hidden = true;
+  renderLookPicker();
+  picker.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+function closeLookPicker() {
+  const picker = $("#charPicker");
+  if (picker) picker.hidden = true;
+  $("#joinGameBtn").hidden = false;
+}
+function joinRoom() {
   sound.enable();
   $("#joinStatus").textContent = "Connecting…";
   $("#joinGameBtn").disabled = true;
+  $("#joinConfirm").disabled = true;
   forgetConnection();
   game = null;
   openSocket({
     type: "join_game",
     code: $("#joinCodeInput").value.trim().toUpperCase(),
     name: $("#playerNameInput").value.trim(),
+    character: look.character,
+    accessory: look.accessory,
   });
+}
+$("#joinPanel").onsubmit = (event) => {
+  event.preventDefault();
+  sound.enable();
+  // Step one names the player; step two hands them a character.
+  const picker = $("#charPicker");
+  if (!picker || picker.hidden) {
+    if (!$("#playerNameInput").reportValidity()) return;
+    openLookPicker();
+    return;
+  }
+  joinRoom();
 };
+$("#joinConfirm").onclick = () => joinRoom();
+$("#charBack").onclick = () => {
+  closeLookPicker();
+  $("#playerNameInput").focus();
+};
+document.addEventListener("click", (event) => {
+  const tab = event.target.closest("[data-char-tab]");
+  if (tab) {
+    lookTab = tab.dataset.charTab;
+    renderLookPicker();
+    return;
+  }
+  const character = event.target.closest("[data-character]");
+  if (character) {
+    look.character = character.dataset.character;
+    saveLook();
+    renderLookPicker();
+    return;
+  }
+  const accessory = event.target.closest("[data-accessory]");
+  if (accessory) {
+    look.accessory = accessory.dataset.accessory;
+    saveLook();
+    renderLookPicker();
+  }
+});
 $("#leavePlayer").onclick = () => {
   if (
     game?.status !== "ended" &&
@@ -2449,6 +2548,8 @@ $("#leavePlayer").onclick = () => {
   delete $("#participantApp").dataset.phase;
   $("#joinPanel").hidden = false;
   $("#joinGameBtn").disabled = false;
+  $("#joinConfirm").disabled = false;
+  closeLookPicker();
   $("#joinStatus").textContent = "";
   connectionText("Ready for your next game.");
 };
@@ -2621,7 +2722,7 @@ function podiumHTML(rows) {
     .filter(Boolean)
     .map(
       (p) =>
-        `<div class="podium-place place-${p.rank}">${avatarHTML(p, "avatar-podium")}<b>${e(p.name)}</b><small>${Number(p.score).toLocaleString()} pts</small><strong>${p.rank}</strong></div>`,
+        `<div class="podium-place place-${p.rank}"><b>${e(p.name)}</b><small>${Number(p.score).toLocaleString()} pts</small><strong>${p.rank}</strong></div>`,
     )
     .join(
       "",
@@ -2943,6 +3044,15 @@ function showLiveLeaderboard(visible, rows) {
     participantMode ? "#playerQuestion" : "#gameModal .stage-question",
   );
   questionArea.classList.toggle("leaderboard-only", show);
+  // The bars own the stage, but the host must still be able to call up the
+  // standings over them. Whichever screen is asked for wins.
+  if (!participantMode) {
+    const stage = $("#resultsStage");
+    const bars = !show && !!stage && !stage.hidden;
+    questionArea.classList.toggle("bars-only", bars);
+    if (bars) $("#gameModal").dataset.bars = "on";
+    else delete $("#gameModal").dataset.bars;
+  }
   panel.innerHTML = show
     ? '<div class="eyebrow">LIVE STANDINGS</div><h2 tabindex="-1">Leaderboard</h2><p class="muted">' +
       (participantMode

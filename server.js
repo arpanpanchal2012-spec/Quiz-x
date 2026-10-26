@@ -858,6 +858,8 @@ const server = http.createServer(async (req, res) => {
       "/qr-code.js": "qr-code.js",
       "/index.html": "index.html",
       "/styles.css": "styles.css",
+      "/characters.css": "characters.css",
+      "/characters.js": "characters.js",
       "/app.js": "app.js",
       "/quiz-sound.js": "quiz-sound.js",
     };
@@ -931,28 +933,36 @@ const PLAYERS_PER_GAME = Math.min(
 );
 // Percentage of the question's points lost by a wrong buzz, chosen per question.
 const BUZZ_PENALTIES = [0, 25, 50, 100];
-// Every player is given a face when they join, so the lobby, the leaderboard and
-// their own phone can show the same friendly character. Deliberately plain emoji:
-// they render everywhere, need no download, and carry no one else's artwork.
-const AVATARS = [
-  "🦊", "🐼", "🐸", "🐯", "🦉", "🐙", "🦄", "🐧",
-  "🐨", "🦁", "🐻", "🐵", "🐺", "🐰", "🐹", "🐮",
-  "🐷", "🐔", "🦖", "🐳", "🦋", "🦇", "🐿️", "🦔",
+// Each player picks who they play as: one of twelve original characters and one
+// accessory. The drawings themselves live in characters.js; these two lists are
+// the server's copy of the ids, used to accept, reject and restore a choice.
+// Keep them in step with CHARACTER_IDS / ACCESSORY_IDS in characters.js.
+const CHARACTER_IDS = [
+  "bear", "cat", "fox", "bunny", "panda", "frog",
+  "penguin", "owl", "tiger", "wolf", "unicorn", "monster",
 ];
-// A joining player takes a face nobody else in that room is using yet.
-function pickAvatar(g) {
-  const used = new Set([...(g?.players?.values() || [])].map((p) => p.avatar));
-  const free = AVATARS.filter((a) => !used.has(a));
-  const pool = free.length ? free : AVATARS;
+const ACCESSORY_IDS = [
+  "none", "cap", "crown", "party", "wizard", "grad", "beanie",
+  "cowboy", "headphones", "shades", "goggles", "helmet", "scarf", "bowtie",
+];
+// A joining player takes a character nobody else in that room is using yet, so
+// a full lobby is a crowd of different animals rather than a dozen bears.
+function pickCharacter(g) {
+  const used = new Set([...(g?.players?.values() || [])].map((p) => p.character));
+  const free = CHARACTER_IDS.filter((c) => !used.has(c));
+  const pool = free.length ? free : CHARACTER_IDS;
   return pool[crypto.randomInt(pool.length)];
 }
-// A room restored from a save made before faces existed still gets one, and it
-// stays the same face on every later restore.
-function avatarFor(p) {
-  if (p.avatar) return p.avatar;
+// Rooms saved before characters existed still come back with one per player,
+// and it stays the same character on every later restore.
+function characterFor(p) {
+  if (CHARACTER_IDS.includes(p?.character)) return p.character;
   let hash = 0;
-  for (const c of String(p.id || "")) hash = (hash * 31 + c.codePointAt(0)) % 1e6;
-  return AVATARS[hash % AVATARS.length];
+  for (const c of String(p?.id || "")) hash = (hash * 31 + c.codePointAt(0)) % 1e6;
+  return CHARACTER_IDS[hash % CHARACTER_IDS.length];
+}
+function accessoryFor(p) {
+  return ACCESSORY_IDS.includes(p?.accessory) ? p.accessory : "none";
 }
 const rosterPending = new Map();
 function clearRoster(g) {
@@ -987,7 +997,8 @@ function ranking(g) {
       id: p.id,
       rank: i + 1,
       name: p.name,
-      avatar: p.avatar || "",
+      character: characterFor(p),
+      accessory: accessoryFor(p),
       score: p.score,
     }));
 }
@@ -1015,7 +1026,8 @@ function state(g) {
     participants: [...g.players.values()].map((p) => ({
       id: p.id,
       name: p.name,
-      avatar: p.avatar || "",
+      character: characterFor(p),
+      accessory: accessoryFor(p),
       score: p.score,
       answered: p.answered,
       connected: !!p.ws && p.ws.readyState === 1,
@@ -1555,13 +1567,22 @@ wss.on("connection", (ws, req) => {
             if (seat.ws) fail("That nickname is taken. Try another.");
             seat.resumeToken = crypto.randomBytes(32).toString("hex");
             seat.ws = null;
+            // Coming back is also a chance to change who you play as.
+            if (CHARACTER_IDS.includes(msg.character)) seat.character = msg.character;
+            if (ACCESSORY_IDS.includes(msg.accessory))
+              seat.accessory = msg.accessory;
             p = seat;
             reclaimed = true;
           } else {
             p = {
               id: crypto.randomUUID(),
               name,
-              avatar: pickAvatar(g),
+              character: CHARACTER_IDS.includes(msg.character)
+                ? msg.character
+                : pickCharacter(g),
+              accessory: ACCESSORY_IDS.includes(msg.accessory)
+                ? msg.accessory
+                : "none",
               score: 0,
               answered: false,
               pending: 0,
@@ -2224,8 +2245,11 @@ function armRestoredRoom(g) {
 }
 function buildRoom(doc) {
   const g = live.restore(doc);
-  // A room saved before faces existed still comes back with one per player.
-  for (const p of g.players.values()) p.avatar = avatarFor(p);
+  // A room saved before characters existed still comes back with one per player.
+  for (const p of g.players.values()) {
+    p.character = characterFor(p);
+    p.accessory = accessoryFor(p);
+  }
   g.clients = new Set();
   g.imageTelemetry = new Map();
   g.host = null;

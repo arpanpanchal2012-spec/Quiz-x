@@ -29,15 +29,6 @@
     stopped = false,
     pingAt = 0;
   const symbols = ["▲", "◆", "●", "■", "⬟", "★"];
-  const AVATAR_TINTS = ["mint", "sun", "sky", "rose", "lilac", "sand"];
-  const tint = (value) => {
-    let hash = 0;
-    for (const c of String(value || ""))
-      hash = (hash * 31 + c.codePointAt(0)) % 997;
-    return AVATAR_TINTS[hash % AVATAR_TINTS.length];
-  };
-  const face = (p) =>
-    `<span class="avatar-badge ${tint(p.avatar)}" aria-hidden="true">${escape(p.avatar || "🙂")}</span>`;
   // The stage is rebuilt on every message. Only the first render of a question
   // plays the "question, then answers" reveal; later updates must not replay it.
   let revealKey = "";
@@ -77,7 +68,7 @@
       .join("")}</div>`;
   }
   function ranking() {
-    return `<div class="display-standings"><div class="eyebrow">${game.status === "ended" ? "FINAL RESULTS" : "LIVE STANDINGS"}</div><h1>${game.status === "ended" ? "Celebrate your winners" : "Leaderboard"}</h1>${rows.length ? `<ol>${rows.map((p) => `<li><b>${Number(p.rank)}</b>${face(p)}<span>${escape(p.name)}</span><strong>${Number(p.score).toLocaleString()} <small>pts</small></strong></li>`).join("")}</ol>` : "<p>No participants yet.</p>"}</div>`;
+    return `<div class="display-standings"><div class="eyebrow">${game.status === "ended" ? "FINAL RESULTS" : "LIVE STANDINGS"}</div><h1>${game.status === "ended" ? "Celebrate your winners" : "Leaderboard"}</h1>${rows.length ? `<ol>${rows.map((p) => `<li><b>${Number(p.rank)}</b><span>${escape(p.name)}</span><strong>${Number(p.score).toLocaleString()} <small>pts</small></strong></li>`).join("")}</ol>` : "<p>No participants yet.</p>"}</div>`;
   }
   function render() {
     if (!game) return;
@@ -86,6 +77,16 @@
     $("#displayCount").textContent =
       `${game.participants.length} joined · ${game.participants.filter((p) => p.answered).length} answered`;
     const stage = $("#displayStage");
+    // The reveal is its own screen: the columns, and nothing else at all — no
+    // question, no answer tiles, no picture, no caption. Even the header and
+    // footer step aside so the room reads one thing.
+    const revealOnly =
+      game.status === "results" && question && question.type !== "text" && !board;
+    document.body.classList.toggle("is-reveal", !!revealOnly);
+    if (revealOnly) {
+      stage.innerHTML = `<section class="display-reveal-stage">${answerColumns()}</section>`;
+      return;
+    }
     if (game.status === "ended" || board) stage.innerHTML = ranking();
     else if (["round_intro", "last_question_intro"].includes(game.status)) {
       const last = game.status === "last_question_intro";
@@ -112,9 +113,9 @@
       const key = `${game.status}:${question.index}:${question.id}:${optionsReady}`;
       const fresh = key !== revealKey;
       revealKey = key;
-      stage.innerHTML = `<section class="display-question"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer"></b></div><h1>${escape(question.text)}</h1><div class="display-media">${question.media && question.mediaType?.startsWith("image/") ? `<img loading="eager" fetchpriority="high" decoding="async" src="${escape(question.media)}" alt="Question image">` : question.media ? "<p>Audio question · Listen to the host.</p>" : ""}</div>${optionsReady && game.status === "results" ? answerColumns() : ""}<div class="display-options${fresh ? " reveal-answers" : ""}" style="--reveal-delay:${fresh ? "0.25s" : "0s"}">${optionsReady ? "" : '<p class="display-readout">The question is on screen. The answers appear next.</p>'}${(optionsReady ? question.options || [] : []).map((o, i) =>
+      stage.innerHTML = `<section class="display-question"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer"></b></div><h1>${escape(question.text)}</h1><div class="display-media">${question.media && question.mediaType?.startsWith("image/") ? `<img loading="eager" fetchpriority="high" decoding="async" src="${escape(question.media)}" alt="Question image">` : question.media ? "<p>Audio question · Listen to the host.</p>" : ""}</div><div class="display-options${fresh ? " reveal-answers" : ""}" style="--reveal-delay:${fresh ? "0.25s" : "0s"}">${optionsReady ? "" : '<p class="display-readout">The question is on screen. The answers appear next.</p>'}${(optionsReady ? question.options || [] : []).map((o, i) =>
         `<div class="display-option tile-${i} ${game.status === "results" && result?.correctIndices?.includes(i) ? "display-correct" : ""}" style="--i:${i}"><span aria-hidden="true">${symbols[i]}</span><span class="display-option-copy">${escape(o)}</span></div>`,
-      ).join("")}</div><p class="display-instruction">${!optionsReady ? "Listen to the question." : game.status === "results" ? "Correct answer: " + escape(result?.correct || "") : question.type === "multi" ? "Select all correct answers, then submit on your device." : question.type === "text" ? "Type your answer on your device." : "Choose your answer on your device."}</p></section>`;
+      ).join("")}</div><p class="display-instruction">${!optionsReady ? "Listen to the question." : question.type === "multi" ? "Select all correct answers, then submit on your device." : question.type === "text" ? "Type your answer on your device." : "Choose your answer on your device."}</p></section>`;
       $(".display-media img")?.addEventListener("load", fit, { once: true });
       tick();
     }

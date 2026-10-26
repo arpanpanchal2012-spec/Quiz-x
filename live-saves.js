@@ -41,7 +41,8 @@ function serialize(g) {
     players: [...g.players.values()].map((p) => ({
       id: p.id,
       name: p.name,
-      avatar: p.avatar || "",
+      character: p.character || "",
+      accessory: p.accessory || "",
       score: p.score,
       answered: !!p.answered,
       pending: p.pending || 0,
@@ -102,7 +103,8 @@ function restore(doc) {
         {
           id: p.id,
           name: p.name,
-          avatar: p.avatar || "",
+          character: p.character || "",
+          accessory: p.accessory || "",
           score: Number(p.score) || 0,
           answered: !!p.answered,
           pending: Number(p.pending) || 0,
