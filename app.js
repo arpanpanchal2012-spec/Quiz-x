@@ -523,6 +523,58 @@ function roundTimeControl(ri, round) {
   const count = round.questions.length;
   return `<div class="round-time"><span class="round-time-label">Time for every question</span><select data-round-seconds="${ri}" aria-label="Time for every question in round ${ri + 1}"><option value="" ${shared === null ? "selected" : ""}>${shared === null ? "Mixed — choose a time" : "Mixed times"}</option>${ROUND_TIMES.map((v) => `<option value="${v}" ${shared === v ? "selected" : ""}>${v} seconds</option>`).join("")}</select><button type="button" class="text-btn" data-round-time-all="${ri}" title="Use this round's time in every round">Use in all rounds</button></div>`;
 }
+// Every round in one list, so a quiz can be timed round by round without
+// hunting through the questions. It reads and writes the same per-question
+// `seconds` as the control inside each round heading.
+function roundTimesHTML() {
+  if (!draft?.rounds.length) return "";
+  const total = draft.rounds.reduce(
+    (sum, r) => sum + r.questions.reduce((n, q) => n + (Number(q.seconds) || 0), 0),
+    0,
+  );
+  const readout = $("#roundTimesSummary");
+  if (readout)
+    readout.textContent = `· ${draft.rounds.length} round${
+      draft.rounds.length === 1 ? "" : "s"
+    }, ${formatDuration(total)} in total`;
+  return (
+    draft.rounds
+      .map((r, ri) => {
+        const shared = roundSeconds(r);
+        const count = r.questions.length;
+        return `<div class="round-time-row">
+          <span class="round-time-name"><b>${ri + 1}</b>${e(roundTitle(ri, r.title))}</span>
+          <span class="round-time-count muted">${count} question${count === 1 ? "" : "s"}</span>
+          <select data-round-seconds="${ri}" aria-label="Time for every question in ${e(roundTitle(ri, r.title))}">
+            <option value="" ${shared === null ? "selected" : ""}>${shared === null ? "Mixed times" : "Mixed — choose a time"}</option>
+            ${ROUND_TIMES.map((v) => `<option value="${v}" ${shared === v ? "selected" : ""}>${v} seconds</option>`).join("")}
+          </select>
+        </div>`;
+      })
+      .join("") +
+    `<div class="round-time-row is-all">
+      <span class="round-time-name">Every round</span>
+      <span class="round-time-count muted">sets all ${draft.rounds.reduce((n, r) => n + r.questions.length, 0)} questions</span>
+      <select data-all-round-seconds aria-label="One time for every question in the quiz">
+        <option value="">Same time everywhere…</option>
+        ${ROUND_TIMES.map((v) => `<option value="${v}">${v} seconds</option>`).join("")}
+      </select>
+    </div>`
+  );
+}
+function formatDuration(seconds) {
+  const total = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(total / 60),
+    rest = total % 60;
+  if (!minutes) return `${rest} second${rest === 1 ? "" : "s"}`;
+  if (!rest) return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+  return `${minutes} min ${rest} s`;
+}
+function renderRoundTimes() {
+  const box = $("#roundTimes");
+  if (!box) return;
+  box.innerHTML = roundTimesHTML();
+}
 function applyRoundTime(ri, value) {
   collectDraft();
   const round = draft.rounds[ri];
@@ -554,6 +606,7 @@ function applyTimeToAllRounds(ri) {
   showToast(`Every question in the quiz is now ${seconds} seconds.`);
 }
 function renderEditor() {
+  renderRoundTimes();
   $("#bulkRound").innerHTML =
     draft.rounds
       .map(
@@ -1651,22 +1704,6 @@ function handleMessage(m) {
       loadWorkspace().catch((err) => showToast(err.message));
     return;
   }
-  if (m.type === "live_counts" && !participantMode) {
-    // A quiet running tally on the host screen while the question is open.
-    $$("#hostOptions [data-answer]").forEach((tile) => {
-      const index = Number(tile.dataset.answer);
-      const count = Number(m.stats?.[index]) || 0;
-      let tally = $(".live-tally", tile);
-      if (!tally) {
-        tally = document.createElement("span");
-        tally.className = "live-tally";
-        tile.append(tally);
-      }
-      tally.textContent = count ? String(count) : "";
-      tally.classList.toggle("is-zero", !count);
-    });
-    return;
-  }
   if (m.type === "host_offline") connectionText(m.message);
   if (m.type === "host_online")
     connectionText("Host reconnected · ready to continue.");
@@ -1683,6 +1720,7 @@ function stopQuestionAudio() {
 }
 function renderLobby() {
   hideBuzzer();
+  hideAnswerChart();
   buzzes = [];
   stopQuestionAudio();
   sound.setPhase("lobby");
@@ -1754,6 +1792,7 @@ function hideBuzzer() {
   syncClipButtons();
 }
 function renderBuzzer() {
+  hideAnswerChart();
   const q = liveQuestion;
   if (!q) return;
   sound.setPhase("question");
@@ -1953,9 +1992,7 @@ function renderQuestion() {
     });
   }
   options.classList.add("reveal-answers");
-  $(`#${prefix}Options`)
-    .querySelectorAll(".live-tally")
-    .forEach((n) => n.remove());
+  hideAnswerChart();
   const answerSummary = $(`#${prefix}AnswerSummary`);
   if (answerSummary) {
     answerSummary.hidden = true;
@@ -2008,6 +2045,41 @@ $("#textAnswerForm").onsubmit = (event) => {
   event.preventDefault();
   submitAnswer($("#textAnswer").value);
 };
+// The room's answers as columns above the answer tiles — only ever drawn once
+// the answers are revealed. Nothing shows while people are still choosing.
+function drawAnswerChart(result, counts, votes) {
+  const chart = $("#hostAnswerChart");
+  const grid = $("#hostOptions");
+  if (!chart || !grid || !liveQuestion) return;
+  const options = liveQuestion.options || [];
+  const correctIndices = new Set(result?.correctIndices || []);
+  const tallest = Math.max(1, ...options.map((_, i) => counts[i] || 0));
+  chart.style.setProperty("--columns", String(options.length));
+  chart.innerHTML = options
+    .map((_, i) => {
+      const count = counts[i] || 0;
+      const height = Math.round((count / tallest) * 100);
+      const share = votes ? Math.round((count / votes) * 100) : 0;
+      return `<div class="chart-column${correctIndices.has(i) ? " is-correct" : ""}${count ? " has-votes" : ""}" title="${count} of ${votes} · ${share}%">
+        <span class="chart-count">${count}</span>
+        <span class="chart-track"><i class="chart-bar tile-${i}" style="--height:${count ? Math.max(6, height) : 0}"></i></span>
+        <span class="chart-symbol" aria-hidden="true">${["▲", "◆", "●", "■", "⬟", "★"][i]}</span>
+      </div>`;
+    })
+    .join("");
+  chart.hidden = false;
+  // Let the bars grow from the baseline rather than appear at full height.
+  requestAnimationFrame(() => {
+    chart.classList.add("is-drawn");
+  });
+}
+function hideAnswerChart() {
+  const chart = $("#hostAnswerChart");
+  if (!chart) return;
+  chart.hidden = true;
+  chart.classList.remove("is-drawn");
+  chart.innerHTML = "";
+}
 function renderResults(result) {
   stopQuestionAudio();
   sound.setPhase("results");
@@ -2025,24 +2097,29 @@ function renderResults(result) {
       counts[index] = n;
       votes += n;
     }
+    const correctIndices = result?.correctIndices || [];
     $$(`#${prefix}Options [data-answer]`).forEach((tile) => {
       const index = Number(tile.dataset.answer);
-      const correct = (result?.correctIndices || []).includes(index);
+      const correct = correctIndices.includes(index);
       tile.classList.toggle("is-correct", correct);
       const count = counts[index] || 0;
       const share = votes ? Math.round((count / votes) * 100) : 0;
-      tile.classList.add("has-bar");
-      const bar = document.createElement("span");
-      bar.className = "answer-bar";
-      bar.style.setProperty("--share", share + "%");
-      // Nobody chose this one: no stub of a bar, just the number.
-      bar.innerHTML = `<i aria-hidden="true"${count ? "" : ' class="is-empty"'}></i><b>${count}</b>`;
-      tile.append(bar);
+      // On a phone the count sits under the answer; on the big screen it is
+      // drawn as a column above the answer, the way a game show shows the room.
+      if (participantMode) {
+        tile.classList.add("has-bar");
+        const bar = document.createElement("span");
+        bar.className = "answer-bar";
+        bar.style.setProperty("--share", share + "%");
+        bar.innerHTML = `<i aria-hidden="true"${count ? "" : ' class="is-empty"'}></i><b>${count}</b>`;
+        tile.append(bar);
+      }
       tile.setAttribute(
         "aria-label",
         `${String.fromCharCode(65 + index)} ${liveQuestion.options[index]} · ${count} of ${votes} answers · ${share}%${correct ? " · correct answer" : ""}`,
       );
     });
+    if (!participantMode) drawAnswerChart(result, counts, votes);
   }
   const summary = $(`#${prefix}AnswerSummary`);
   if (summary) {
@@ -2085,6 +2162,7 @@ function renderResults(result) {
   }
 }
 function renderEnded(rows) {
+  hideAnswerChart();
   showLiveLeaderboard(false, []);
   $("#submitMulti").hidden = true;
   stopQuestionAudio();
@@ -2822,6 +2900,29 @@ window.addEventListener(
 );
 window.addEventListener("pointerup", endThumbDrag);
 window.addEventListener("pointercancel", endThumbDrag);
+$("#roundTimes")?.addEventListener("change", (event) => {
+  const all = event.target.closest("[data-all-round-seconds]");
+  if (all) {
+    if (!all.value) return;
+    collectDraft();
+    const seconds = Number(all.value);
+    if (!ROUND_TIMES.includes(seconds)) return;
+    let count = 0;
+    for (const round of draft.rounds) {
+      round.seconds = seconds;
+      for (const q of round.questions) {
+        q.seconds = seconds;
+        count++;
+      }
+    }
+    dirty = true;
+    renderEditor();
+    showToast(`Every question is now ${seconds} seconds — ${count} in all.`);
+    return;
+  }
+  const pick = event.target.closest("[data-round-seconds]");
+  if (pick && pick.value) applyRoundTime(Number(pick.dataset.roundSeconds), pick.value);
+});
 $("#moveSelected").onclick = () =>
   moveQuestions(
     $$(".question-select:checked").map((input) => {
@@ -2873,6 +2974,7 @@ $("#toggleLeaderboard").onclick = () => {
 };
 function renderRoundIntro() {
   hideBuzzer();
+  hideAnswerChart();
   const last = game.status === "last_question_intro";
   stopQuestionAudio();
   sound.setPhase("lobby");

@@ -6907,18 +6907,6 @@ body.reordering {
     max-width: 100%;
   }
 }
-/* A quiet running tally, host screen only, while a question is open. */
-.live-tally {
-  margin-left: auto;
-  min-width: 22px;
-  text-align: right;
-  font-size: 15px;
-  font-weight: 800;
-  opacity: 0.92;
-}
-.live-tally.is-zero {
-  opacity: 0.4;
-}
 .answer {
   display: flex;
   align-items: center;
@@ -7057,4 +7045,234 @@ body.reordering {
   .avatar-badge.avatar-hero {
     animation: none;
   }
+}
+
+/* Every round's clock, in one list. */
+.round-times-panel {
+  margin: 18px 0 6px;
+}
+.round-times-panel > summary {
+  cursor: pointer;
+  font-weight: 750;
+  font-size: 15px;
+  color: #2c2438;
+}
+.round-times-panel > summary .muted {
+  font-weight: 600;
+  font-size: 13px;
+}
+.round-times-panel p {
+  margin: 10px 0 14px;
+}
+#roundTimes {
+  display: grid;
+  gap: 8px;
+}
+.round-time-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.4fr) minmax(90px, 0.7fr) minmax(150px, 0.9fr);
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 1px solid #e6dff8;
+  border-radius: 12px;
+  background: #fbfaff;
+}
+.round-time-row.is-all {
+  border-style: dashed;
+  background: #f6f3ff;
+}
+.round-time-name {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 700;
+  font-size: 14px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.round-time-name b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  background: #eeeaff;
+  color: var(--purple);
+  font-size: 12px;
+}
+.round-time-count {
+  font-size: 12.5px;
+}
+.round-time-row select {
+  margin: 0;
+  padding: 7px 9px;
+  font-size: 13.5px;
+  min-width: 0;
+}
+@media (max-width: 720px) {
+  .round-time-row {
+    grid-template-columns: 1fr auto;
+    gap: 6px 10px;
+  }
+  .round-time-count {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+  .round-time-row select {
+    grid-column: 2;
+  }
+}
+
+/* ===== rc.18 — the room's answers as columns, at the reveal only ==========
+   Nobody is shown how the room is leaning while the question is open. The
+   columns are drawn once the correct answer is on screen, above the answers.
+   ======================================================================= */
+
+.answer-chart {
+  display: grid;
+  grid-template-columns: repeat(var(--columns, 4), minmax(0, 1fr));
+  align-items: end;
+  gap: 9px;
+  margin: 6px 0 10px;
+  padding: 0 4px;
+}
+.answer-chart[hidden] {
+  display: none;
+}
+.chart-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: end;
+  gap: 6px;
+  min-width: 0;
+  animation: chartIn 0.4s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.chart-count {
+  font-size: 20px;
+  font-weight: 800;
+  color: #2c2438;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.chart-track {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  width: 100%;
+  height: clamp(84px, 15vh, 170px);
+  border-radius: 10px;
+  background: rgb(44 36 56 / 0.04);
+}
+.chart-bar {
+  display: block;
+  width: min(72px, 74%);
+  height: 0;
+  border-radius: 8px 8px 3px 3px;
+  background: #7868ee;
+  transition: height 0.75s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.is-drawn .chart-bar {
+  height: calc(var(--height, 0) * 1%);
+  min-height: 0;
+}
+.chart-bar.tile-0 { background: #7868ee; }
+.chart-bar.tile-1 { background: #4f9dff; }
+.chart-bar.tile-2 { background: #f2b53a; }
+.chart-bar.tile-3 { background: #38b98a; }
+.chart-bar.tile-4 { background: #b06ff0; }
+.chart-bar.tile-5 { background: #ef6f8a; }
+.chart-symbol {
+  font-size: 14px;
+  color: #8b819c;
+}
+.chart-column.is-correct .chart-symbol {
+  color: #199d6c;
+  font-weight: 900;
+}
+.chart-column.is-correct .chart-count {
+  color: #12805a;
+}
+.chart-column.is-correct.has-votes .chart-bar {
+  box-shadow: 0 0 0 3px rgb(25 157 108 / 0.35);
+}
+@keyframes chartIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chart-column { animation: none; }
+  .chart-bar { transition: none; }
+}
+@media (max-height: 820px) {
+  .chart-track { height: 96px; }
+  .answer-chart { margin: 2px 0 8px; }
+  .chart-count { font-size: 17px; }
+}
+
+/* The same columns on the projector, big enough to read from the back. */
+.display-chart {
+  display: grid;
+  grid-template-columns: repeat(var(--columns, 4), minmax(0, 1fr));
+  align-items: end;
+  gap: 3%;
+  margin: 0 0 18px;
+}
+.display-chart-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.display-chart-count {
+  font-size: calc(var(--display-answer, 30px) * 0.85);
+  font-weight: 800;
+  color: #2c2438;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.display-chart-track {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  width: 100%;
+  height: min(22vh, 210px);
+  border-radius: 10px;
+  background: rgb(44 36 56 / 0.07);
+}
+.display-chart-track i {
+  display: block;
+  width: min(120px, 80%);
+  border-radius: 8px 8px 3px 3px;
+  transition: height 0.8s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.display-chart-track i.tile-0 { background: #cb294a; }
+.display-chart-track i.tile-1 { background: #2268bd; }
+.display-chart-track i.tile-2 { background: #ffd149; }
+.display-chart-track i.tile-3 { background: #207b4c; }
+.display-chart-track i.tile-4 { background: #7544aa; }
+.display-chart-track i.tile-5 { background: #b8542f; }
+.display-chart-column.is-correct .display-chart-count { color: #12805a; }
+.display-chart-symbol {
+  font-size: calc(var(--display-answer, 30px) * 0.5);
+  color: #8b819c;
+}
+.display-chart-column.is-correct .display-chart-symbol {
+  color: #199d6c;
+  font-weight: 900;
+}
+.display-chart-share {
+  font-size: calc(var(--display-answer, 30px) * 0.42);
+  color: #6a6178;
+  font-weight: 700;
+}
+.display-chart-column.is-correct .display-chart-share {
+  color: #12805a;
+}
+@media (prefers-reduced-motion: reduce) {
+  .display-chart-track i { transition: none; }
 }

@@ -62,6 +62,20 @@
     root.style.setProperty("--display-answer", "28px");
     // Content stays scrollable instead of clipping at high zoom or extreme length.
   }
+  // Columns above the answers, drawn only once the answers are revealed.
+  function answerColumns() {
+    const options = question?.options || [];
+    const stats = result?.stats || {};
+    const counts = options.map((_, i) => Number(stats[i]) || 0);
+    const votes = counts.reduce((sum, n) => sum + n, 0);
+    const tallest = Math.max(1, ...counts);
+    return `<div class="display-chart" style="--columns:${options.length}">${counts
+      .map(
+        (count, i) =>
+          `<div class="display-chart-column${result?.correctIndices?.includes(i) ? " is-correct" : ""}"><span class="display-chart-count">${count}</span><span class="display-chart-track"><i class="tile-${i}" style="height:${count ? Math.max(6, Math.round((count / tallest) * 100)) : 0}%"></i></span><span class="display-chart-symbol">${symbols[i]}</span><span class="display-chart-share">${votes ? Math.round((count / votes) * 100) : 0}%</span></div>`,
+      )
+      .join("")}</div>`;
+  }
   function ranking() {
     return `<div class="display-standings"><div class="eyebrow">${game.status === "ended" ? "FINAL RESULTS" : "LIVE STANDINGS"}</div><h1>${game.status === "ended" ? "Celebrate your winners" : "Leaderboard"}</h1>${rows.length ? `<ol>${rows.map((p) => `<li><b>${Number(p.rank)}</b>${face(p)}<span>${escape(p.name)}</span><strong>${Number(p.score).toLocaleString()} <small>pts</small></strong></li>`).join("")}</ol>` : "<p>No participants yet.</p>"}</div>`;
   }
@@ -98,15 +112,9 @@
       const key = `${game.status}:${question.index}:${question.id}:${optionsReady}`;
       const fresh = key !== revealKey;
       revealKey = key;
-      stage.innerHTML = `<section class="display-question"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer"></b></div><h1>${escape(question.text)}</h1><div class="display-media">${question.media && question.mediaType?.startsWith("image/") ? `<img loading="eager" fetchpriority="high" decoding="async" src="${escape(question.media)}" alt="Question image">` : question.media ? "<p>Audio question · Listen to the host.</p>" : ""}</div><div class="display-options${fresh ? " reveal-answers" : ""}" style="--reveal-delay:${fresh ? "0.25s" : "0s"}">${optionsReady ? "" : '<p class="display-readout">The question is on screen. The answers appear next.</p>'}${(optionsReady ? question.options || [] : []).map((o, i) => {
-        const count = Number(result?.stats?.[i]) || 0;
-        const votes = Object.values(result?.stats || {}).reduce(
-          (sum, n) => sum + (Number(n) || 0),
-          0,
-        );
-        const share = votes ? Math.round((count / votes) * 100) : 0;
-        return `<div class="display-option tile-${i} ${game.status === "results" && result?.correctIndices?.includes(i) ? "display-correct" : ""}" style="--i:${i}"><span aria-hidden="true">${symbols[i]}</span><span class="display-option-copy">${escape(o)}</span>${game.status === "results" ? `<span class="display-answer-bar"><i style="width:${share}%"${count ? "" : ' class="is-empty"'}></i><b>${count}</b></span>` : ""}</div>`;
-      }).join("")}</div><p class="display-instruction">${!optionsReady ? "Listen to the question." : game.status === "results" ? "Correct answer: " + escape(result?.correct || "") : question.type === "multi" ? "Select all correct answers, then submit on your device." : question.type === "text" ? "Type your answer on your device." : "Choose your answer on your device."}</p></section>`;
+      stage.innerHTML = `<section class="display-question"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer"></b></div><h1>${escape(question.text)}</h1><div class="display-media">${question.media && question.mediaType?.startsWith("image/") ? `<img loading="eager" fetchpriority="high" decoding="async" src="${escape(question.media)}" alt="Question image">` : question.media ? "<p>Audio question · Listen to the host.</p>" : ""}</div>${optionsReady && game.status === "results" ? answerColumns() : ""}<div class="display-options${fresh ? " reveal-answers" : ""}" style="--reveal-delay:${fresh ? "0.25s" : "0s"}">${optionsReady ? "" : '<p class="display-readout">The question is on screen. The answers appear next.</p>'}${(optionsReady ? question.options || [] : []).map((o, i) =>
+        `<div class="display-option tile-${i} ${game.status === "results" && result?.correctIndices?.includes(i) ? "display-correct" : ""}" style="--i:${i}"><span aria-hidden="true">${symbols[i]}</span><span class="display-option-copy">${escape(o)}</span></div>`,
+      ).join("")}</div><p class="display-instruction">${!optionsReady ? "Listen to the question." : game.status === "results" ? "Correct answer: " + escape(result?.correct || "") : question.type === "multi" ? "Select all correct answers, then submit on your device." : question.type === "text" ? "Type your answer on your device." : "Choose your answer on your device."}</p></section>`;
       $(".display-media img")?.addEventListener("load", fit, { once: true });
       tick();
     }

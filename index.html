@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#513293" />
     <title>Quizzes · Live learning, together</title>
-    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.17" />
+    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.18" />
   </head>
   <body>
     <div class="app-shell" id="hostApp">
@@ -348,6 +348,19 @@
                 </button>
               </div>
             </details>
+            <details class="panel round-times-panel" id="roundTimesPanel" open>
+              <summary>
+                Question time by round
+                <span class="muted" id="roundTimesSummary"></span>
+              </summary>
+              <p class="muted">
+                One clock per round. Set 45 seconds for round one and 30 for
+                round two here; every question in that round follows. A single
+                question can still differ — change it on the question itself and
+                the round shows <b>Mixed</b>.
+              </p>
+              <div id="roundTimes"></div>
+            </details>
             <div class="studio-workspace">
               <aside class="studio-rail">
                 <div class="rail-heading">
@@ -562,6 +575,12 @@
                   <dd>
                     1.5 seconds after the question on the host screen and
                     projector, 0.15 on a phone
+                  </dd>
+                  <dt>Answer split</dt>
+                  <dd>
+                    Shown only at the reveal. While the question is open, nobody
+                    sees how the room is answering — not players, not the
+                    projector, not the host
                   </dd>
                   <dt>Question start</dt>
                   <dd>
@@ -847,6 +866,12 @@
                   <b id="liveAnswerMeter">0</b><span>Answers</span>
                 </div>
               </div>
+              <div
+                class="answer-chart"
+                id="hostAnswerChart"
+                aria-hidden="true"
+                hidden
+              ></div>
               <div class="answer-grid" id="hostOptions"></div>
               <p class="answer-summary" id="hostAnswerSummary" hidden></p>
               <section
@@ -1264,10 +1289,10 @@ Answer: together</pre
       </p>
       <div id="draftRecoveryList"></div>
     </dialog>
-    <script src="/qr-code.js?v=0.9.0-rc.17"></script>
-    <script src="/quiz-sound.js?v=0.9.0-rc.17"></script>
-    <script src="/app.js?v=0.9.0-rc.17"></script>
-    <script src="/extensions.js?v=0.9.0-rc.17"></script>
-    <script src="/professional.js?v=0.9.0-rc.17"></script>
+    <script src="/qr-code.js?v=0.9.0-rc.18"></script>
+    <script src="/quiz-sound.js?v=0.9.0-rc.18"></script>
+    <script src="/app.js?v=0.9.0-rc.18"></script>
+    <script src="/extensions.js?v=0.9.0-rc.18"></script>
+    <script src="/professional.js?v=0.9.0-rc.18"></script>
   </body>
 </html>

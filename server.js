@@ -1761,14 +1761,10 @@ wss.on("connection", (ws, req) => {
         if (q.type !== "text")
           for (const selected of q.type === "multi" ? answer : [answer])
             g.stats[selected] = (g.stats[selected] || 0) + 1;
-        // While the question is open the host — and only the host — sees the
-        // tally building up. Players and the projector get nothing until the
-        // answers are revealed, so nobody can read the room and copy.
-        send(g.host, "live_counts", {
-          stats: { ...g.stats },
-          answered: [...g.players.values()].filter((p) => p.answered).length,
-          total: g.players.size,
-        });
+        // Nobody is shown the split while the question is open — not the
+        // players, not the projector, and not the host. Picking one answer
+        // should not be swayed by seeing how the room is leaning. How the
+        // room answered arrives with the correct answer, at the reveal.
         send(ws, "answer_received", {
           accepted: true,
         });
