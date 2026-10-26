@@ -47,6 +47,25 @@ test("a round can share one clock", async (t) => {
   await t.test("a single question still reports its own time", () => {
     assert.equal(roundSeconds({ questions: [{ seconds: 20 }] }), 20);
   });
+  await t.test("a quiz can hold different times in different rounds", () => {
+    // The overview writes the same field the round heading writes.
+    const rounds = [
+      { title: "Warm up", questions: [{ seconds: 45 }, { seconds: 45 }] },
+      { title: "Speed", questions: [{ seconds: 30 }] },
+    ];
+    assert.equal(roundSeconds(rounds[0]), 45);
+    assert.equal(roundSeconds(rounds[1]), 30);
+  });
+  await t.test("the quiz total is reported in words", () => {
+    const formatDuration = new Function(
+      liftFunction("formatDuration") + "; return formatDuration;",
+    )();
+    assert.equal(formatDuration(45), "45 seconds");
+    assert.equal(formatDuration(1), "1 second");
+    assert.equal(formatDuration(120), "2 minutes");
+    assert.equal(formatDuration(110), "1 min 50 s");
+    assert.equal(formatDuration(0), "0 seconds");
+  });
   await t.test("the offered times are the ones the server accepts", () => {
     const offered = appSource.match(/const ROUND_TIMES = \[([^\]]+)\]/);
     assert.ok(offered, "ROUND_TIMES is missing");
@@ -307,16 +326,17 @@ test("every player is given a face of their own", { timeout: 60000 }, async (t) 
         p.send("submit_answer", { questionId, answer: 0 });
       await new Promise((r) => setTimeout(r, 500));
       host.send("reveal_answers");
-      // The host is told how the tally is building while the question is open.
-      const tally = await host.wait("live_counts");
-      assert.equal(tally.total, 8);
-      assert.ok(tally.answered >= 1);
-      assert.ok(tally.stats["0"] >= 1, "the chosen answer is counted");
+      // While the question is open nobody is told how the room is leaning.
+      assert.ok(
+        !host.inbox.some((m) => m.type === "live_counts"),
+        "a running tally must not be sent to the host",
+      );
       const ended = await host.wait("question_ended");
+      // The split arrives with the correct answer, and counts every choice.
+      assert.equal(ended.stats["0"], 8);
       const rows = ended.leaderboard || ended.visibleLeaderboard || [];
       assert.ok(rows.length, "no standings came back");
       for (const row of rows) assert.ok(row.avatar, `${row.name} has no face`);
-      assert.equal(ended.stats["0"], 8, "all eight answers are counted per option");
     });
     await t.test("the saved room document keeps each face", async () => {
       // The snapshot written to live_games is what a restart rebuilds from.
