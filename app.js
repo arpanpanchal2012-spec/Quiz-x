@@ -2042,9 +2042,9 @@ $("#textAnswerForm").onsubmit = (event) => {
 };
 // The room's answers as columns above the answer tiles — only ever drawn once
 // the answers are revealed. Nothing shows while people are still choosing.
-// The reveal gets the stage to itself. No question text, no answer tiles, no
-// media, no "correct answer" caption — just the columns and their counts, so
-// the room reads one thing at a time.
+// The reveal keeps the question and the answers on screen — the room needs to
+// read the question, then the bars, then which row was right. The columns get
+// their own strip between the question and the answer rows.
 function drawAnswerChart(result, counts, votes) {
   const chart = $("#resultsChart");
   const stage = $("#resultsStage");
@@ -2054,7 +2054,7 @@ function drawAnswerChart(result, counts, votes) {
   const tallest = Math.max(1, ...options.map((_, i) => counts[i] || 0));
   chart.style.setProperty("--columns", String(options.length));
   chart.innerHTML = options
-    .map((_, i) => {
+    .map((option, i) => {
       const count = counts[i] || 0;
       const height = Math.round((count / tallest) * 100);
       const share = votes ? Math.round((count / votes) * 100) : 0;
@@ -2066,8 +2066,6 @@ function drawAnswerChart(result, counts, votes) {
     })
     .join("");
   stage.hidden = false;
-  // Nothing else shares the stage while the bars are up.
-  $("#gameModal .stage-question").classList.add("bars-only");
   $("#gameModal").dataset.bars = "on";
   // Let the bars grow from the baseline rather than appear at full height.
   requestAnimationFrame(() => {
@@ -2082,7 +2080,6 @@ function hideAnswerChart() {
     stage.classList.remove("is-drawn");
   }
   if (chart) chart.innerHTML = "";
-  $("#gameModal .stage-question")?.classList.remove("bars-only");
   delete $("#gameModal").dataset.bars;
 }
 function renderResults(result) {
@@ -2107,6 +2104,19 @@ function renderResults(result) {
       const index = Number(tile.dataset.answer);
       const correct = correctIndices.includes(index);
       tile.classList.toggle("is-correct", correct);
+      // A wrong row is marked as plainly as the right one, exactly like a
+      // game show: a tick on the answer that was right, a cross on the rest.
+      tile.classList.toggle("is-wrong", !correct && liveQuestion?.type !== "text");
+      const marks = [...tile.querySelectorAll(":scope > .answer-mark")];
+      marks.slice(1).forEach((extra) => extra.remove());
+      let mark = marks[0];
+      if (!mark) {
+        mark = document.createElement("span");
+        mark.className = "answer-mark";
+        mark.setAttribute("aria-hidden", "true");
+        tile.append(mark);
+      }
+      mark.textContent = correct ? "✓" : "✗";
       const count = counts[index] || 0;
       const share = votes ? Math.round((count / votes) * 100) : 0;
       // On a phone the count sits under the answer; on the big screen it is
@@ -2275,7 +2285,10 @@ setInterval(() => {
       : game.status === "ended"
         ? "FINISHED"
         : "RESULTS";
-  $(participantMode ? "#playerTimer" : "#hostTimer").textContent = text;
+  const clockEl = $(participantMode ? "#playerTimer" : "#hostTimer");
+  clockEl.textContent = text;
+  // A word like READY needs a smaller face than "30s": the ticker is a circle.
+  clockEl.dataset.clock = /^\d+s$/.test(text) ? "count" : "word";
   if (
     participantMode &&
     game.status === "question" &&
@@ -2849,8 +2862,11 @@ $("#importForm").onsubmit = async (event) => {
 };
 
 function roundTitle(index, title) {
+  // The same clean-up the server does, so a title typed as "Round 1 · Warm up"
+  // never becomes "Round 1: · Warm up" on any screen.
   const clean = String(title || "")
     .replace(/^round\s*\d+\s*[:.\-–—]?\s*/i, "")
+    .replace(/^[·•:–—\-\s]+/, "")
     .trim();
   return `Round ${index + 1}${clean ? ": " + clean : ""}`;
 }
@@ -3044,13 +3060,11 @@ function showLiveLeaderboard(visible, rows) {
     participantMode ? "#playerQuestion" : "#gameModal .stage-question",
   );
   questionArea.classList.toggle("leaderboard-only", show);
-  // The bars own the stage, but the host must still be able to call up the
-  // standings over them. Whichever screen is asked for wins.
-  if (!participantMode) {
+  // The standings take the stage; hiding them puts the question back exactly
+  // as it was, bars and marks included.
+  if (!participantMode && !show) {
     const stage = $("#resultsStage");
-    const bars = !show && !!stage && !stage.hidden;
-    questionArea.classList.toggle("bars-only", bars);
-    if (bars) $("#gameModal").dataset.bars = "on";
+    if (stage && !stage.hidden) $("#gameModal").dataset.bars = "on";
     else delete $("#gameModal").dataset.bars;
   }
   panel.innerHTML = show

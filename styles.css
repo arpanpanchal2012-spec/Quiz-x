@@ -837,6 +837,8 @@ h2 {
 }
 .toast {
   position: fixed;
+  /* A message never swallows a click: the button underneath still works. */
+  pointer-events: none;
   right: 25px;
   bottom: 25px;
   background: #26232d;
@@ -2954,10 +2956,7 @@ textarea:focus-visible {
 }
 .answer.is-correct::after,
 .p-answer.is-correct::after {
-  content: "✓";
-  margin-left: auto;
-  font-size: 24px;
-  font-weight: 900;
+  content: none;
 }
 @keyframes ambientDrift {
   from {
@@ -5737,9 +5736,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   outline-offset: -5px;
 }
 .display-correct:after {
-  content: "✓";
-  margin-left: auto;
-  font-size: 32px;
+  content: none;
 }
 .display-instruction {
   text-align: center;
@@ -7131,12 +7128,14 @@ body.reordering {
   border-radius: 8px 8px 3px 3px;
   transition: height 0.8s cubic-bezier(0.2, 0.8, 0.3, 1);
 }
-.display-chart-track i.tile-0 { background: #cb294a; }
-.display-chart-track i.tile-1 { background: #2268bd; }
-.display-chart-track i.tile-2 { background: #ffd149; }
-.display-chart-track i.tile-3 { background: #207b4c; }
-.display-chart-track i.tile-4 { background: #7544aa; }
-.display-chart-track i.tile-5 { background: #b8542f; }
+/* Columns keep the colour of the answer they count, so the wall reads as one
+   picture: the bar over a tile is that tile's colour. */
+.display-chart-track i.tile-0 { background: linear-gradient(180deg, #9a5ee8, #6f34c0); }
+.display-chart-track i.tile-1 { background: linear-gradient(180deg, #4a8df0, #2a5fbb); }
+.display-chart-track i.tile-2 { background: linear-gradient(180deg, #f6c542, #d99a12); }
+.display-chart-track i.tile-3 { background: linear-gradient(180deg, #3ecb95, #1c9a6c); }
+.display-chart-track i.tile-4 { background: linear-gradient(180deg, #c07ef2, #8f45c9); }
+.display-chart-track i.tile-5 { background: linear-gradient(180deg, #ff8aa2, #e05574); }
 .display-chart-column.is-correct .display-chart-count { color: #12805a; }
 .display-chart-symbol {
   font-size: calc(var(--display-answer, 30px) * 0.5);
@@ -7251,91 +7250,109 @@ body.reordering {
 }
 
 /* --- the reveal has the stage to itself --------------------------------- */
+/* The bars sit in their own strip between the question and the answer rows —
+   question on top, bars in the middle, the four answers underneath, exactly the
+   reading order of the room. Nothing is hidden at the reveal. */
 .stage-results {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  padding: 6px 0 20px;
+  padding: 2px 0 0;
+  width: 100%;
 }
 .stage-results[hidden] {
   display: none;
 }
 .stage-chart {
-  width: 100%;
-  max-width: 1000px;
-  margin: 0;
-  gap: 16px;
+  width: min(1040px, 100%);
+  margin: 0 auto;
+  gap: 14px;
+  padding: 0;
 }
 .stage-chart .chart-track {
-  height: clamp(150px, 32vh, 320px);
-  border-radius: 14px;
+  height: clamp(96px, 20vh, 210px);
+  border-radius: 10px;
+  background: #ffffff1f;
+  border: 1px solid #ffffff33;
 }
 .stage-chart .chart-count {
-  font-size: 30px;
+  font-size: 26px;
+  color: #fff;
 }
 .stage-chart .chart-bar {
-  width: min(120px, 78%);
+  width: min(104px, 76%);
+  border-radius: 8px 8px 2px 2px;
 }
 .stage-chart .chart-symbol {
-  font-size: 20px;
+  font-size: 17px;
+  color: #ffffffb0;
 }
-/* While the bars are up, the question page is gone: no text, no answers, no
-   media, no caption, not even the music bar. One screen, one idea. */
-#gameModal .stage-question.bars-only > :not(#resultsStage) {
+.stage-chart .chart-column.is-correct .chart-count,
+.stage-chart .chart-column.is-correct .chart-symbol {
+  color: #8bffc0;
+}
+.stage-chart .chart-column.is-correct.has-votes .chart-bar {
+  box-shadow: 0 0 0 3px #8bffc055;
+}
+/* The strip only appears at the reveal; before it the stage is the question. */
+#gameModal[data-bars="on"] .stage-question {
+  gap: 8px;
+}
+/* The explainer picture has done its job: at the reveal the room reads the
+   question, the bars and the answers, with no image competing for the eye. */
+#gameModal[data-bars="on"] .live-media-row {
   display: none !important;
 }
-#gameModal .stage-question.bars-only {
-  justify-content: center;
-}
-#gameModal .stage-question.bars-only > #resultsStage {
-  width: 100%;
-}
-/* The round pill and the host's music bar belong to the question page too. */
-#gameModal[data-bars="on"] .stage-top,
-#gameModal[data-bars="on"] #hostSound,
-#gameModal[data-bars="on"] #lobbyMusic {
-  display: none;
-}
 @media (max-height: 820px) {
-  .stage-chart .chart-track { height: 150px; }
-  .stage-results { padding-bottom: 10px; }
+  .stage-chart .chart-track { height: 104px; }
+  .stage-chart .chart-count { font-size: 21px; }
 }
 @media (max-width: 720px) {
-  .char-grid { gap: 4px; }
-  .kchar-holder.kchar-hero { width: 76px; height: 152px; }
-  .stage-chart .chart-track { height: clamp(120px, 26vh, 200px); }
-  .stage-chart .chart-count { font-size: 22px; }
+  .stage-chart .chart-track { height: 96px; }
+  .stage-chart .chart-count { font-size: 19px; }
+}
+@media (max-width: 420px) {
+  #playerOptions .p-answer {
+    font-size: 19px;
+    grid-template-columns: 20px minmax(0, 1fr);
+  }
 }
 
-/* The audience reveal: columns on an empty stage, chrome hidden. */
-.display-reveal-stage {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  width: 100%;
-  min-height: 100%;
+/* The audience reveal keeps the question, adds a strip of bars under it, and
+   marks each answer row with a tick or a cross. */
+.projector-stage .display-chart {
+  margin: 1.2vh 0 1.6vh;
 }
-.display-reveal-stage .display-chart {
-  width: 100%;
-  max-width: 1500px;
-  margin: 0 auto;
+.projector-stage .display-chart-track {
+  height: clamp(80px, 17vh, 210px);
 }
-.display-reveal-stage .display-chart-track {
-  height: clamp(220px, 44vh, 560px);
+.display-mark {
+  margin-left: auto;
+  font-size: clamp(24px, 2.4vw, 44px);
+  font-weight: 900;
+  line-height: 1;
 }
-.display-reveal-stage .display-chart-count {
-  font-size: clamp(30px, 3.2vw, 56px);
+.display-option.display-wrong {
+  filter: saturate(0.55) brightness(0.8);
 }
-.display-reveal-stage .display-chart-symbol,
-.display-reveal-stage .display-chart-share {
-  font-size: clamp(20px, 1.8vw, 32px);
-}
-.projector-page.is-reveal .projector-head,
-.projector-page.is-reveal .projector-footer {
-  display: none;
+.display-option.display-correct {
+  box-shadow: inset 0 0 0 4px #ffffff, 0 0 0 4px #3dffa5;
 }
 .projector-page.is-reveal .projector-stage {
-  padding: 4vh 4vw;
+  padding-top: 1.5vh;
+}
+.projector-page.is-reveal .display-media {
+  display: none;
+}
+/* With the picture gone the reveal can use the whole wall. */
+.projector-page.is-reveal .projector-stage .display-chart-track {
+  height: clamp(120px, 24vh, 320px);
+}
+.projector-page.is-reveal .display-option {
+  min-height: clamp(76px, 9.5vh, 120px);
+}
+.projector-page.is-reveal .display-options {
+  margin-top: 1.4vh;
 }
 
 /* Names carry the lobby now that the faces are phone-only: give them room. */
@@ -7390,4 +7407,498 @@ body.reordering {
 }
 #playerOptions .p-answer .answer-bar b {
   font-size: 15px;
+}
+
+/* ===== rc.20 — Spotlight stage ===========================================
+   Deep stage, one bright question card, chunky answers with a cast shadow.
+   Everything below only paints the live game: the editor, the studio and the
+   settings pages keep the light look they had.
+   ======================================================================= */
+
+#gameModal.open .game-stage,
+#gameModal.open .game-head {
+  --spot-ink: #ffffff;
+  --spot-dim: #b9aede;
+  --spot-line: #ffffff1f;
+}
+
+/* The stage itself: a lit floor under a dark room. */
+#gameModal.open .stage-question {
+  justify-content: center;
+}
+#gameModal.open .game-stage {
+  background:
+    radial-gradient(120% 90% at 50% -10%, #4a3590 0%, #2a1f5c 42%, #171034 100%) !important;
+  color: #fff;
+}
+#gameModal.open .game-head {
+  background: linear-gradient(180deg, #1b1338, #241a4d) !important;
+  color: #fff;
+  border-bottom: 1px solid #ffffff14;
+}
+#gameModal.open .game-head h2,
+#gameModal.open .game-head .eyebrow,
+#gameModal.open .game-head .muted,
+#gameModal.open .game-head .text-btn {
+  color: #fff;
+}
+#gameModal.open .game-head .eyebrow { color: #b9aede; }
+#gameModal.open .game-head .muted { color: #a99cd0; }
+#gameModal.open .game-head .text-btn { background: #ffffff14; }
+#gameModal.open .game-head .live-participation,
+#gameModal.open .game-head .join-code {
+  background: #ffffff10;
+  border-color: #ffffff1f;
+  color: #fff;
+}
+#gameModal.open .game-head .join-code b { color: #fff; }
+#gameModal.open .game-head .join-code span { color: #b9aede; }
+
+/* The round pill. */
+#gameModal.open .stage-top .pill {
+  background: #ffffff1c !important;
+  color: #e7dcff;
+  font-weight: 800;
+}
+
+/* The question: a bright plate, big and centred. */
+#gameModal.open #hostQuestion {
+  background: linear-gradient(180deg, #ffffff, #f4f0ff);
+  color: #1d1440;
+  border-radius: 12px;
+  padding: 18px 34px;
+  box-shadow: 0 14px 34px #0d072480, 0 2px 0 #ffffff;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+#gameModal.open #hostQuestionNumber {
+  color: #b9aede;
+  letter-spacing: 0.16em;
+}
+#gameModal.open #hostHint {
+  color: #c2b7e6;
+  font-weight: 650;
+}
+
+/* The clock and the answer meter, as two halos either side. */
+#gameModal.open #hostTimer,
+#gameModal.open #playerTimer {
+  background: #ffffff !important;
+  color: #2a1b5a !important;
+  border-radius: 999px;
+  font-weight: 900;
+  box-shadow: 0 6px 0 #7b5cff, 0 12px 30px #3d2a8a66;
+}
+#gameModal.open #hostTimer[data-clock="word"],
+#gameModal.open #playerTimer[data-clock="word"] {
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+#gameModal.open #hostTimer.timer-urgent,
+#gameModal.open #playerTimer.timer-urgent {
+  background: #ff5f86 !important;
+  color: #fff !important;
+  box-shadow: 0 6px 0 #b3243f, 0 12px 30px #ff335566;
+}
+#gameModal.open .live-answer-counter b {
+  background: #ffffff;
+  color: #2a1b5a;
+  box-shadow: 0 6px 0 #7b5cff, 0 12px 30px #3d2a8a66;
+  font-weight: 900;
+}
+#gameModal.open .live-answer-counter span {
+  color: #c2b7e6;
+  font-weight: 700;
+}
+
+
+/* The answers: four chunky buttons with a cast shadow under each. */
+#gameModal.open .answer-grid { gap: 14px; }
+#gameModal.open #hostOptions .answer {
+  border-radius: 14px;
+  min-height: 96px;
+  font-weight: 800;
+  box-shadow: 0 7px 0 #00000042, 0 14px 30px #0b06205c;
+  position: relative;
+  overflow: hidden;
+}
+#gameModal.open #hostOptions .answer[data-answer="0"] {
+  background: linear-gradient(180deg, #9a5ee8, #6f34c0) !important;
+  color: #fff !important;
+  box-shadow: 0 7px 0 #3f1c78, 0 14px 30px #0b06205c;
+}
+#gameModal.open #hostOptions .answer[data-answer="1"] {
+  background: linear-gradient(180deg, #4a8df0, #2a5fbb) !important;
+  color: #fff !important;
+  box-shadow: 0 7px 0 #1b3d7d, 0 14px 30px #0b06205c;
+}
+#gameModal.open #hostOptions .answer[data-answer="2"] {
+  background: linear-gradient(180deg, #f6c542, #d99a12) !important;
+  color: #3a2700 !important;
+  box-shadow: 0 7px 0 #9a6a05, 0 14px 30px #0b06205c;
+}
+#gameModal.open #hostOptions .answer[data-answer="3"] {
+  background: linear-gradient(180deg, #3ecb95, #1c9a6c) !important;
+  color: #04301f !important;
+  box-shadow: 0 7px 0 #0d6446, 0 14px 30px #0b06205c;
+}
+#gameModal.open #hostOptions .answer[data-answer="4"] {
+  background: linear-gradient(180deg, #c07ef2, #8f45c9) !important;
+  color: #fff !important;
+  box-shadow: 0 7px 0 #5a2680, 0 14px 30px #0b06205c;
+}
+#gameModal.open #hostOptions .answer[data-answer="5"] {
+  background: linear-gradient(180deg, #ff8aa2, #e05574) !important;
+  color: #fff !important;
+  box-shadow: 0 7px 0 #96203c, 0 14px 30px #0b06205c;
+}
+
+/* The reveal marks: a tick on the right answer, a cross on the rest. */
+#gameModal.open .answer-mark {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+#gameModal.open .answer.is-correct .answer-mark,
+#gameModal.open .answer.is-wrong .answer-mark {
+  opacity: 1;
+  transform: none;
+}
+#gameModal.open #hostOptions .answer.is-wrong {
+  filter: saturate(0.82) brightness(0.9);
+  opacity: 0.94;
+}
+#gameModal.open #hostOptions .answer.is-correct {
+  outline: 0;
+  box-shadow: 0 7px 0 #0d6446, 0 0 0 3px #8bffc0, 0 14px 30px #0b06205c !important;
+}
+#gameModal.open #hostOptions .answer.is-wrong { outline: 0; }
+
+/* The two big buttons the host presses. */
+#gameModal.open .stage-controls .primary-btn {
+  background: #ffd166;
+  color: #3a2a00;
+  box-shadow: 0 5px 0 #b8860b;
+  border: 0;
+  font-weight: 900;
+}
+#gameModal.open .stage-controls .secondary-btn,
+#gameModal.open .stage-controls a.secondary-btn {
+  background: #ffffff14;
+  color: #e7dcff;
+  border-color: #ffffff2b;
+}
+#gameModal.open #hostSound,
+#gameModal.open .sound-controls {
+  color: #b9aede;
+}
+
+/* Phones keep their own light card, but the marks are the same. */
+#playerOptions .p-answer {
+  position: relative;
+}
+/* The mark sits in the corner of the tile, clear of the count and the bar. */
+#playerOptions .p-answer .answer-mark {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+  opacity: 0;
+}
+#playerOptions .p-answer.is-correct .answer-mark { color: #fff; }
+#playerOptions .p-answer.is-wrong .answer-mark { color: #ffffffd0; }
+#playerOptions .p-answer.is-correct .answer-mark,
+#playerOptions .p-answer.is-wrong .answer-mark { opacity: 1; }
+#playerOptions .p-answer.is-wrong { filter: saturate(0.82) brightness(0.9); }
+#playerOptions .p-answer.is-correct::after { content: none; }
+#playerOptions .p-answer.is-correct { outline: 0; box-shadow: inset 0 0 0 3px #12a06e; }
+
+/* The lobby is the room filling up: bigger name chips, centred, so the host can
+   read who has arrived from across the hall. */
+#gameModal.open .join-wall {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  width: 100%;
+  padding: 4px 0;
+}
+#gameModal.open .join-chip {
+  background: #ffffff;
+  border: 0;
+  color: #241a4d;
+  font-size: 15px;
+  font-weight: 800;
+  padding: 10px 18px;
+  border-radius: 999px;
+  box-shadow: 0 4px 0 #7b5cff, 0 10px 22px #0d072466;
+  max-width: 260px;
+}
+#gameModal.open .join-chip.is-away {
+  opacity: 0.5;
+  box-shadow: 0 4px 0 #5a4a9c;
+}
+#gameModal.open .join-wall.is-empty {
+  border-color: #ffffff33;
+  background: #ffffff0d;
+  color: #c2b7e6;
+}
+#gameModal.open .join-wall.is-empty p { color: #c2b7e6; }
+#gameModal.open .join-wall + .muted { color: #c2b7e6; }
+
+/* Standings on the dark stage: the panel and its rows belong to the room. */
+#gameModal.open .stage-question.leaderboard-only,
+#gameModal.open[data-phase="ended"] .stage-question {
+  background: transparent;
+  padding: 0;
+}
+#gameModal.open #hostLeaderboard {
+  background: transparent;
+  color: #fff;
+  font-size: 16px;
+}
+#gameModal.open #hostLeaderboard .eyebrow { color: #b9aede; }
+#gameModal.open #hostLeaderboard h2 { color: #fff; margin: 4px 0 2px; }
+#gameModal.open #hostLeaderboard .muted { color: #c2b7e6; }
+#gameModal.open #hostLeaderboard .leaderboard {
+  margin-top: 14px;
+  max-height: 62vh;
+}
+#gameModal.open #hostLeaderboard .leaderboard li {
+  border: 1px solid #ffffff1f;
+  background: #ffffff10;
+  border-radius: 14px;
+  margin-bottom: 8px;
+  padding: 14px 18px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+#gameModal.open #hostLeaderboard .leaderboard li:first-child {
+  background: linear-gradient(180deg, #ffd97a, #f0b429);
+  border-color: #ffe6a1;
+  color: #3a2a00;
+  box-shadow: 0 6px 0 #b8860b, 0 14px 30px #0d072480;
+}
+#gameModal.open #hostLeaderboard .leaderboard .rank {
+  background: #ffffff26;
+  color: #fff;
+  width: 30px;
+  height: 30px;
+  font-size: 14px;
+  font-weight: 900;
+}
+#gameModal.open #hostLeaderboard .leaderboard li:first-child .rank {
+  background: #3a2a0026;
+  color: #3a2a00;
+}
+#gameModal.open #hostLeaderboard .leaderboard strong {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== rc.20 — the projector wears the same Spotlight stage =============
+   The room sees one look: deep indigo, a bright question plate, chunky answer
+   tiles with a lip and a cast shadow, then the bars and the marks.
+   ======================================================================= */
+.projector-page {
+  background:
+    radial-gradient(120% 90% at 50% -10%, #4a3590 0%, #2a1f5c 42%, #171034 100%)
+      fixed;
+  color: #fff;
+}
+.projector-head {
+  background: linear-gradient(180deg, #1b1338, #241a4d);
+  border-bottom: 1px solid #ffffff14;
+}
+.projector-head button {
+  background: #ffffff14;
+  border-color: #ffffff2b;
+}
+.projector-footer {
+  background: #1b1338;
+  color: #a99cd0;
+  border-top: 1px solid #ffffff14;
+}
+.display-meta {
+  color: #b9aede;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 15px;
+}
+#displayTimer {
+  background: #fff;
+  color: #2a1b5a;
+  font-weight: 900;
+  box-shadow: 0 6px 0 #7b5cff, 0 12px 30px #3d2a8a66;
+  letter-spacing: 0;
+}
+#displayTimer.timer-urgent {
+  background: #ff5f86;
+  color: #fff;
+  box-shadow: 0 6px 0 #b3243f, 0 12px 30px #ff335566;
+}
+/* The question is the bright plate in a dark room. */
+.display-question h1 {
+  background: linear-gradient(180deg, #ffffff, #f4f0ff);
+  color: #1d1440;
+  border-radius: 14px;
+  padding: 20px 30px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  box-shadow: 0 16px 40px #0d072480;
+}
+.display-instruction,
+.display-readout {
+  color: #c2b7e6;
+  font-weight: 700;
+}
+/* Answer tiles: the same palette as the host screen, with a chunky lip. */
+.display-option {
+  border-radius: 14px;
+  font-weight: 800;
+  box-shadow: 0 8px 0 #00000042, 0 16px 34px #0b06205c;
+}
+.display-option.tile-0 {
+  background: linear-gradient(180deg, #9a5ee8, #6f34c0);
+  color: #fff;
+  box-shadow: 0 8px 0 #3f1c78, 0 16px 34px #0b06205c;
+}
+.display-option.tile-1 {
+  background: linear-gradient(180deg, #4a8df0, #2a5fbb);
+  color: #fff;
+  box-shadow: 0 8px 0 #1b3d7d, 0 16px 34px #0b06205c;
+}
+.display-option.tile-2 {
+  background: linear-gradient(180deg, #f6c542, #d99a12);
+  color: #3a2700;
+  box-shadow: 0 8px 0 #9a6a05, 0 16px 34px #0b06205c;
+}
+.display-option.tile-3 {
+  background: linear-gradient(180deg, #3ecb95, #1c9a6c);
+  color: #04301f;
+  box-shadow: 0 8px 0 #0d6446, 0 16px 34px #0b06205c;
+}
+.display-option.tile-4 {
+  background: linear-gradient(180deg, #c07ef2, #8f45c9);
+  color: #fff;
+  box-shadow: 0 8px 0 #5a2680, 0 16px 34px #0b06205c;
+}
+.display-option.tile-5 {
+  background: linear-gradient(180deg, #ff8aa2, #e05574);
+  color: #fff;
+  box-shadow: 0 8px 0 #96203c, 0 16px 34px #0b06205c;
+}
+.display-chart-track {
+  background: #ffffff1f;
+  border: 1px solid #ffffff33;
+}
+.display-chart-count { color: #fff; }
+.display-chart-symbol { color: #ffffffb0; }
+.display-chart-share { color: #b9aede; }
+.display-chart-column.is-correct .display-chart-count { color: #8bffc0; }
+.display-chart-column.is-correct .display-chart-symbol { color: #8bffc0; }
+.display-option.display-correct {
+  box-shadow: 0 8px 0 #0d6446, 0 0 0 4px #8bffc0, 0 16px 34px #0b06205c;
+}
+.display-option.display-wrong {
+  filter: saturate(0.8) brightness(0.88);
+}
+/* Lobby, standings and the ending share the stage. */
+.projector-lobby h1,
+.display-standings h1 { color: #fff; }
+.projector-lobby > p,
+.projector-lobby .muted { color: #c2b7e6; }
+.projector-invite {
+  background: #ffffff0f;
+  border: 1px solid #ffffff26;
+  box-shadow: 0 20px 50px #0d072480;
+}
+.projector-invite strong { color: #ffd97a; }
+.projector-invite p { color: #d8cff2; }
+.display-standings li {
+  background: #ffffff10;
+  border: 1px solid #ffffff1f;
+  color: #fff;
+  font-weight: 700;
+}
+.display-standings li:first-child {
+  background: linear-gradient(180deg, #ffd97a, #f0b429);
+  border-color: #ffe6a1;
+  color: #3a2a00;
+  box-shadow: 0 6px 0 #b8860b, 0 16px 34px #0d072480;
+}
+.display-buzzes li { color: #fff; }
+
+/* The stage has to fit a laptop: with six answers the tiles give up height
+   before anything scrolls off the bottom. */
+#gameModal.open .stage-question {
+  overflow: hidden;
+  min-height: 0;
+}
+/* The picture gives up its height first; the answers keep theirs. */
+#gameModal.open .live-media-row {
+  flex: 0 1 auto;
+  min-height: 0;
+  padding: 2px 0;
+}
+#gameModal.open #hostMedia {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  overflow: hidden;
+}
+#gameModal.open #hostMedia .question-media {
+  /* Never taller than a quarter of the window: the answers need the rest. */
+  max-height: min(var(--live-media, 320px), 26vh);
+}
+#gameModal.open .answer-grid {
+  flex: 0 0 auto;
+}
+#gameModal.open #hostOptions .answer {
+  /* Six answers and a picture have to share a laptop screen: the tiles give up
+     height down to a readable bar, and the font never goes below 28px. */
+  min-height: clamp(46px, 8vh, 96px);
+  height: auto;
+}
+@media (max-height: 820px) {
+  #gameModal.open .live-media-row #hostTimer,
+  #gameModal.open .live-media-row #playerTimer {
+    width: 64px;
+    height: 64px;
+    flex-basis: 64px;
+    font-size: 21px;
+  }
+  #gameModal.open #hostTimer[data-clock="word"] { font-size: 13px; }
+  #gameModal.open .live-answer-counter {
+    width: 64px;
+    flex-basis: 64px;
+  }
+  #gameModal.open .live-answer-counter b {
+    width: 54px;
+    height: 54px;
+    font-size: 22px;
+  }
+  /* Text never drops below the size the room can read from the back: the tile
+     gives up its padding and its height instead. */
+  #gameModal.open #hostOptions .answer {
+    font-size: max(28px, 2.6vh);
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+  #gameModal.open #hostQuestion { padding: 10px 22px; }
+}
+
+/* A toast must never sit on top of the host's next button, even while it fades. */
+body:has(#gameModal.open) .toast {
+  bottom: 104px;
 }

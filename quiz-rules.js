@@ -42,6 +42,7 @@ function grade(q, answer) {
 function roundLabel(index, title) {
   const cleaned = String(title || "")
     .replace(/^round\s*\d+\s*[:.\-–—]?\s*/i, "")
+    .replace(/^[·•:–—\-\s]+/, "")
     .trim();
   return `Round ${index + 1}${cleaned ? ": " + cleaned : ""}`;
 }

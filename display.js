@@ -77,16 +77,11 @@
     $("#displayCount").textContent =
       `${game.participants.length} joined · ${game.participants.filter((p) => p.answered).length} answered`;
     const stage = $("#displayStage");
-    // The reveal is its own screen: the columns, and nothing else at all — no
-    // question, no answer tiles, no picture, no caption. Even the header and
-    // footer step aside so the room reads one thing.
-    const revealOnly =
+    // At the reveal the room reads three things in order: the question, then the
+    // bars, then which answer was right. All three stay on screen.
+    const revealing =
       game.status === "results" && question && question.type !== "text" && !board;
-    document.body.classList.toggle("is-reveal", !!revealOnly);
-    if (revealOnly) {
-      stage.innerHTML = `<section class="display-reveal-stage">${answerColumns()}</section>`;
-      return;
-    }
+    document.body.classList.toggle("is-reveal", !!revealing);
     if (game.status === "ended" || board) stage.innerHTML = ranking();
     else if (["round_intro", "last_question_intro"].includes(game.status)) {
       const last = game.status === "last_question_intro";
@@ -113,9 +108,12 @@
       const key = `${game.status}:${question.index}:${question.id}:${optionsReady}`;
       const fresh = key !== revealKey;
       revealKey = key;
-      stage.innerHTML = `<section class="display-question"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer"></b></div><h1>${escape(question.text)}</h1><div class="display-media">${question.media && question.mediaType?.startsWith("image/") ? `<img loading="eager" fetchpriority="high" decoding="async" src="${escape(question.media)}" alt="Question image">` : question.media ? "<p>Audio question · Listen to the host.</p>" : ""}</div><div class="display-options${fresh ? " reveal-answers" : ""}" style="--reveal-delay:${fresh ? "0.25s" : "0s"}">${optionsReady ? "" : '<p class="display-readout">The question is on screen. The answers appear next.</p>'}${(optionsReady ? question.options || [] : []).map((o, i) =>
-        `<div class="display-option tile-${i} ${game.status === "results" && result?.correctIndices?.includes(i) ? "display-correct" : ""}" style="--i:${i}"><span aria-hidden="true">${symbols[i]}</span><span class="display-option-copy">${escape(o)}</span></div>`,
-      ).join("")}</div><p class="display-instruction">${!optionsReady ? "Listen to the question." : question.type === "multi" ? "Select all correct answers, then submit on your device." : question.type === "text" ? "Type your answer on your device." : "Choose your answer on your device."}</p></section>`;
+      const revealed = game.status === "results";
+      stage.innerHTML = `<section class="display-question"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer"></b></div><h1>${escape(question.text)}</h1><div class="display-media">${question.media && question.mediaType?.startsWith("image/") ? `<img loading="eager" fetchpriority="high" decoding="async" src="${escape(question.media)}" alt="Question image">` : question.media ? "<p>Audio question · Listen to the host.</p>" : ""}</div>${revealed ? answerColumns() : ""}<div class="display-options${fresh ? " reveal-answers" : ""}" style="--reveal-delay:${fresh ? "0.25s" : "0s"}">${optionsReady ? "" : '<p class="display-readout">The question is on screen. The answers appear next.</p>'}${(optionsReady ? question.options || [] : []).map((o, i) => {
+        const right = revealed && result?.correctIndices?.includes(i);
+        const mark = revealed ? `<span class="display-mark" aria-hidden="true">${right ? "✓" : "✗"}</span>` : "";
+        return `<div class="display-option tile-${i} ${right ? "display-correct" : revealed ? "display-wrong" : ""}" style="--i:${i}"><span aria-hidden="true">${symbols[i]}</span><span class="display-option-copy">${escape(o)}</span>${mark}</div>`;
+      }).join("")}</div><p class="display-instruction">${!optionsReady ? "Listen to the question." : revealed ? "Correct answer: " + escape(result?.correct || "") : question.type === "multi" ? "Select all correct answers, then submit on your device." : question.type === "text" ? "Type your answer on your device." : "Choose your answer on your device."}</p></section>`;
       $(".display-media img")?.addEventListener("load", fit, { once: true });
       tick();
     }

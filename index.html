@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#513293" />
     <title>Quizzes · Live learning, together</title>
-    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.19" />
-    <link rel="stylesheet" href="/characters.css?v=0.9.0-rc.19" />
+    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.20" />
+    <link rel="stylesheet" href="/characters.css?v=0.9.0-rc.20" />
   </head>
   <body>
     <div class="app-shell" id="hostApp">
@@ -586,14 +586,15 @@
                   <dt>Characters</dt>
                   <dd>
                     12 characters and 14 accessories, drawn in code — 168
-                    combinations, no downloads. They appear on the player's own
-                    phone only; the host screen and projector show nicknames and
-                    numbers, never faces
+                    combinations, no downloads, drawn as shaded toys. They appear
+                    on the player's own phone only; the host screen and projector
+                    show nicknames and numbers, never faces
                   </dd>
                   <dt>Answer bars</dt>
                   <dd>
-                    The reveal gets a screen of its own: columns and counts, with
-                    the question, the options and the media off screen
+                    Shown only at the reveal, together with the question and the
+                    options: the bars sit between them, and every answer row is
+                    ticked or crossed. The question picture steps off that page
                   </dd>
                   <dt>Question start</dt>
                   <dd>
@@ -879,6 +880,14 @@
                   <b id="liveAnswerMeter">0</b><span>Answers</span>
                 </div>
               </div>
+            <section
+              class="stage-results"
+              id="resultsStage"
+              aria-label="Answer results"
+              hidden
+            >
+              <div class="answer-chart stage-chart" id="resultsChart" aria-hidden="true"></div>
+            </section>
               <div class="answer-grid" id="hostOptions"></div>
               <p class="answer-summary" id="hostAnswerSummary" hidden></p>
               <section
@@ -911,14 +920,6 @@
                   Reveal answer · no winner
                 </button>
               </section>
-            <section
-              class="stage-results"
-              id="resultsStage"
-              aria-label="Answer results"
-              hidden
-            >
-              <div class="answer-chart stage-chart" id="resultsChart" aria-hidden="true"></div>
-            </section>
               <div id="hostResults"></div>
               <section
                 id="hostLeaderboard"
@@ -1352,11 +1353,11 @@ Answer: together</pre
       </p>
       <div id="draftRecoveryList"></div>
     </dialog>
-    <script src="/qr-code.js?v=0.9.0-rc.19"></script>
-    <script src="/quiz-sound.js?v=0.9.0-rc.19"></script>
-    <script src="/characters.js?v=0.9.0-rc.19"></script>
-    <script src="/app.js?v=0.9.0-rc.19"></script>
-    <script src="/extensions.js?v=0.9.0-rc.19"></script>
-    <script src="/professional.js?v=0.9.0-rc.19"></script>
+    <script src="/qr-code.js?v=0.9.0-rc.20"></script>
+    <script src="/quiz-sound.js?v=0.9.0-rc.20"></script>
+    <script src="/characters.js?v=0.9.0-rc.20"></script>
+    <script src="/app.js?v=0.9.0-rc.20"></script>
+    <script src="/extensions.js?v=0.9.0-rc.20"></script>
+    <script src="/professional.js?v=0.9.0-rc.20"></script>
   </body>
 </html>

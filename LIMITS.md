@@ -21,10 +21,10 @@ variable on the hosting dashboard, without touching code.
 | Round name | 100 characters | no |
 | Timer per question | 5–120 seconds | no |
 | Timer, round buttons | 10, 15, 20, 30, 35, 40, 45, 60, 90, 120 seconds | no |
-| Characters | 12 characters × 14 accessories = 168 looks, drawn in code, no downloads | no |
+| Characters | 12 characters × 14 accessories = 168 looks, drawn in code as shaded toys (gradients, highlights, cast shadow), no downloads | no |
 | Where characters appear | The player's own phone only — the host screen and the projector never show a face | no |
 | Answer reveal | 1.5 s after the question on host/projector, 0.15 s on a phone | no |
-| Answer split | Shown **only** once the answers are revealed · nothing is shown while the question is open, to anyone · the reveal is its own screen, with the question, options and media off it | no |
+| Answer split | Shown **only** once the answers are revealed · nothing is shown while the question is open, to anyone · the reveal keeps the question and the options on screen, with the bars between them and a ✓ / ✗ on every answer row; the question picture is hidden at that moment | no |
 | Question start | Two presses: the question, then the options. **No clock runs between them** — the countdown starts with the options | no |
 | Points per question | 100–5,000 | no |
 | Saved editor draft | 500,000 characters | no |
