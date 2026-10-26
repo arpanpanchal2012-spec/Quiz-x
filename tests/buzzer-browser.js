@@ -98,6 +98,9 @@ module.exports = async function buzzerBrowser({ page, browser, password }) {
     const p = await ctx.newPage();
     await p.goto(`/join?code=${code}`);
     await p.getByLabel("Your nickname").fill(name);
+    // rc.19: name first, then the character picker, then join.
+    await p.getByRole("button", { name: "Choose your character" }).click();
+    await p.locator("#charPicker:not([hidden])").waitFor();
     await p.getByRole("button", { name: "Join game" }).click();
     // Proof the phone really joined: the join panel closes and the player
     // screen opens. (#playerTitle is present but hidden before joining.)

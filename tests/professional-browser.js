@@ -224,6 +224,10 @@ module.exports = async function professionalBrowser({ page, browser, errors }) {
   await phone.goto("/join?code=" + code);
   await phone.locator("#playerNameInput").fill("Professional phone test");
   await phone.locator("#joinGameBtn").click();
+  // rc.19: choose a character before entering the room.
+  await phone.locator("#charPicker:not([hidden])").waitFor();
+  await phone.locator('#charGrid [data-character="fox"]').click();
+  await phone.locator("#joinConfirm").click();
   await expect(phone.locator("#playerQuestion")).toBeVisible();
   await page.locator("#nextQuestion").click();
   await expect(page.locator("#hostQuestion")).toContainText(

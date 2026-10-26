@@ -2,6 +2,13 @@ const { test, expect } = require("@playwright/test");
 const crypto = require("crypto");
 // Legacy game regressions proceed past the new host-controlled last-question notice.
 // The professional workflow below explicitly tests the announcement on all screens.
+// Joining a live room is two steps since rc.19: the name, then who you play as.
+async function joinLive(page, nickname) {
+  await page.getByLabel("Your nickname").fill(nickname);
+  await page.getByRole("button", { name: "Choose your character" }).click();
+  await page.locator("#charPicker:not([hidden])").waitFor();
+  await page.getByRole("button", { name: "Join game" }).click();
+}
 async function advanceHost(page, expectedLabel) {
   if (expectedLabel)
     await expect(
@@ -158,8 +165,7 @@ test("Host editor and a separate mobile player complete a saved multimedia quiz"
   const player = await context.newPage();
   player.on("pageerror", (err) => errors.push(err.message));
   await player.goto(`/join?code=${code}`);
-  await player.getByLabel("Your nickname").fill("Mobile player");
-  await player.getByRole("button", { name: "Join game" }).click();
+  await joinLive(player, "Mobile player");
   await expect(player.locator("#playerTitle")).toHaveText("You’re in!");
   const oldTrack = await player
     .locator("#playerMusic audio")
@@ -455,8 +461,7 @@ test("Host editor and a separate mobile player complete a saved multimedia quiz"
   const newCode = await page.locator("#hostCode").textContent();
   await player.goto("/join?code=" + newCode);
   await player.evaluate(countNotes);
-  await player.getByLabel("Your nickname").fill("Soundtrack player");
-  await player.getByRole("button", { name: "Join game" }).click();
+  await joinLive(player, "Soundtrack player");
   await expect(player.locator("#playerTitle")).toHaveText("You’re in!");
   await expect
     .poll(() => player.evaluate(() => QuizzesSound.status().state))
@@ -760,8 +765,7 @@ test("Host editor and a separate mobile player complete a saved multimedia quiz"
   await expect(page.locator("#hostCode")).toHaveText(/^QZ[A-F0-9]{6}$/);
   const roundCode = await page.locator("#hostCode").textContent();
   await player.goto("/join?code=" + roundCode);
-  await player.getByLabel("Your nickname").fill("Round fan");
-  await player.getByRole("button", { name: "Join game" }).click();
+  await joinLive(player, "Round fan");
   await expect(page.locator("#playerCount")).toHaveText("1");
   await advanceHost(page, "Start question");
   await expect(player.locator("#playerRound")).toContainText("Round 1: Easy");
@@ -984,8 +988,7 @@ test("Host editor and a separate mobile player complete a saved multimedia quiz"
   );
   await page.locator("#toggleLeaderboard").click();
   await player.goto("/join?code=" + layoutCode);
-  await player.getByLabel("Your nickname").fill("Layout player");
-  await player.getByRole("button", { name: "Join game" }).click();
+  await joinLive(player, "Layout player");
   await expect(page.locator("#playerCount")).toHaveText("1");
   await advanceHost(page, "Start question");
   await expect(player.locator("#playerOptions button")).toHaveCount(6);
@@ -1213,8 +1216,7 @@ test("Host editor and a separate mobile player complete a saved multimedia quiz"
   const privateCode = await page.locator("#hostCode").textContent();
   await player.setViewportSize({ width: 390, height: 844 });
   await player.goto("/join?code=" + privateCode);
-  await player.getByLabel("Your nickname").fill("Privacy player");
-  await player.getByRole("button", { name: "Join game" }).click();
+  await joinLive(player, "Privacy player");
   await expect(page.locator("#playerCount")).toHaveText("1");
   await advanceHost(page);
   await expect(page.locator("#hostMedia img")).toBeVisible();

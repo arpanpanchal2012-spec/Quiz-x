@@ -1,7 +1,7 @@
 "use strict";
 // The three editor changes that save a host time, and the two live changes that
 // make a room feel like a game show. Pure functions only — no server needed for
-// the round clock and the reorder maths, a small server for the faces.
+// the round clock and the reorder maths, a small server for the characters.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { spawn } = require("node:child_process");
@@ -163,8 +163,8 @@ function startServer(data) {
   return { child, ready };
 }
 
-test("every player is given a face of their own", { timeout: 60000 }, async (t) => {
-  const data = fs.mkdtempSync(path.join(root, ".test-faces-"));
+test("every player is given a character of their own", { timeout: 60000 }, async (t) => {
+  const data = fs.mkdtempSync(path.join(root, ".test-characters-"));
   const server = startServer(data);
   let cookie = "";
   const request = async (p, method = "GET", body) => {
@@ -276,31 +276,64 @@ test("every player is given a face of their own", { timeout: 60000 }, async (t) 
     for (let i = 0; i < 8; i++) {
       const p = await socket();
       sockets.push(p);
-      p.send("join_game", { code, name: `Player ${i + 1}` });
+      // The last two choose their own; everyone else lets the room fill in.
+      const pick =
+        i === 6
+          ? { character: "owl", accessory: "crown" }
+          : i === 7
+            ? { character: "frog", accessory: "helmet" }
+            : {};
+      p.send("join_game", { code, name: `Player ${i + 1}`, ...pick });
       const joined = await p.wait("joined");
       seats.push(joined);
     }
-    const faces = seats.map(
-      (s) => s.game.participants.find((p) => p.id === s.playerId)?.avatar,
-    );
+    const looks = seats.map((s) => {
+      const p = s.game.participants.find((x) => x.id === s.playerId);
+      return { character: p?.character, accessory: p?.accessory };
+    });
 
-    await t.test("everyone who joins gets a face", () => {
-      assert.equal(faces.length, 8);
-      for (const f of faces) assert.ok(f, "a seat came back without a face");
+    await t.test("everyone who joins gets a character", () => {
+      assert.equal(looks.length, 8);
+      for (const l of looks)
+        assert.ok(l.character, "a seat came back without a character");
     });
-    await t.test("no two players in the same room share a face", () => {
-      assert.equal(new Set(faces).size, 8, faces.join(" "));
+    await t.test("the room hands out a different animal to each new seat", () => {
+      // The last two chose for themselves, so they are not part of the draw.
+      const handed = looks.slice(0, 6).map((l) => l.character);
+      assert.equal(new Set(handed).size, handed.length, handed.join(" "));
     });
-    await t.test("the same face is used on every screen", async () => {
+    await t.test("a player who picks gets exactly what they picked", () => {
+      assert.deepEqual(looks[6], { character: "owl", accessory: "crown" });
+      assert.deepEqual(looks[7], { character: "frog", accessory: "helmet" });
+      for (const l of looks)
+        assert.ok(l.accessory, "a seat came back without an accessory");
+    });
+    await t.test("nonsense picks are replaced, never stored", async () => {
+      const p = await socket();
+      sockets.push(p);
+      p.send("join_game", {
+        code,
+        name: "Player 9",
+        character: "<script>",
+        accessory: "not-a-hat",
+      });
+      const joined = await p.wait("joined");
+      const me = joined.game.participants.find((x) => x.id === joined.playerId);
+      assert.ok(me.character && me.character !== "<script>", me.character);
+      assert.equal(me.accessory, "none");
+    });
+    await t.test("the same character is used on every screen", async () => {
       await new Promise((r) => setTimeout(r, 200));
       const state = (await host.wait("participants_updated")).game;
       for (const p of state.participants) {
         const joined = seats.find((s) => s.playerId === p.id);
+        if (!joined) continue;
         const mine = joined.game.participants.find((x) => x.id === p.id);
-        assert.equal(p.avatar, mine.avatar);
+        assert.equal(p.character, mine.character);
+        assert.equal(p.accessory, mine.accessory);
       }
     });
-    await t.test("the leaderboard carries the face too", async () => {
+    await t.test("the leaderboard carries the character too", async () => {
       // Starting a round shows its announcement first, so the host taps again.
       let started = null;
       for (let attempt = 0; attempt < 4 && !started; attempt++) {
@@ -333,12 +366,13 @@ test("every player is given a face of their own", { timeout: 60000 }, async (t) 
       );
       const ended = await host.wait("question_ended");
       // The split arrives with the correct answer, and counts every choice.
-      assert.equal(ended.stats["0"], 8);
+      assert.equal(ended.stats["0"], sockets.length);
       const rows = ended.leaderboard || ended.visibleLeaderboard || [];
       assert.ok(rows.length, "no standings came back");
-      for (const row of rows) assert.ok(row.avatar, `${row.name} has no face`);
+      for (const row of rows)
+        assert.ok(row.character, `${row.name} has no character on the board`);
     });
-    await t.test("the saved room document keeps each face", async () => {
+    await t.test("the saved room document keeps each character", async () => {
       // The snapshot written to live_games is what a restart rebuilds from.
       await new Promise((r) => setTimeout(r, 1500));
       const rows = fs
@@ -350,8 +384,12 @@ test("every player is given a face of their own", { timeout: 60000 }, async (t) 
       const row = db.prepare("SELECT document FROM live_games WHERE code=?").get(code);
       assert.ok(row, "the room was not snapshotted");
       const doc = JSON.parse(row.document);
-      assert.equal(doc.players.length, 8);
-      for (const p of doc.players) assert.ok(p.avatar, `${p.name} has no saved face`);
+      assert.equal(doc.players.length, 9);
+      for (const p of doc.players)
+        assert.ok(p.character, `${p.name} has no saved character`);
+      const owl = doc.players.find((p) => p.name === "Player 7");
+      assert.equal(owl.character, "owl");
+      assert.equal(owl.accessory, "crown");
       db.close();
     });
   } finally {
