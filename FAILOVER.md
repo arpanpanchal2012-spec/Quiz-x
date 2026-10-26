@@ -28,6 +28,7 @@ deployment, and that takes about a minute.
 | **"Disconnected. Reconnecting…"** on the host screen | The server connection dropped. The browser is retrying by itself, at most every ~15 seconds. |
 | Players' phones show the same message | Same thing; their tabs retry on their own too. |
 | **"Host reconnected · ready to continue."** | The room is back. Nobody lost their score. |
+| **"READY" where the clock should be** | The question is on screen and the clock has not started. Press **Show options**. This is normal at the start of every question. |
 | **"Host disconnected. They can reconnect to continue."** on player screens | The host's connection dropped — including when their laptop died. The room waits. |
 | **"Host reconnected"** appears on players' screens again | Back in business; carry on with the next question. |
 
@@ -163,6 +164,20 @@ while the room still shows.
   and the last save is at most a second old.
 
 ---
+
+## The rhythm of every question
+
+Two presses, then a third to reveal:
+
+1. Press **Start question**. The question is on every screen on its own, with no
+   clock and no answers — read it out at your own pace.
+2. Press **Show options**. The answers appear and the countdown starts. A player
+   who tries to answer before this is told to watch the big screen; their phone
+   has not been sent the answers at all.
+3. Press **Reveal answers** when the room is done, or let the clock run out.
+
+A **buzzer** question skips the two steps: its music clip and the Buzz button
+*are* the question, so it opens ready to play.
 
 ## Case 6 — only your own connection is broken
 

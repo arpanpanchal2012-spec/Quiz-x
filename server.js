@@ -996,6 +996,7 @@ function state(g) {
     code: g.code,
     title: g.quiz.title,
     status: g.status,
+    optionsVisible: g.status === "question" ? !!g.optionsVisible : null,
     index: g.index,
     total: g.questions.length,
     deadline: g.deadline,
@@ -1021,14 +1022,17 @@ function state(g) {
     })),
   };
 }
-function question(g) {
+function question(g, reveal = g.optionsVisible !== false) {
   const q = current(g);
   if (!q) return null;
   return {
     id: `${g.code}:${g.index}`,
     text: q.text,
     type: q.type,
-    options: q.options,
+    // Until the host shows them, the options are not sent at all — a player
+    // cannot peek at them in the browser, because they are not there.
+    options: reveal ? q.options : [],
+    optionsVisible: reveal,
     media: features.mediaURL(q.media),
     mediaType: q.mediaType,
     seconds: q.seconds,
@@ -1100,6 +1104,7 @@ function finishBuzzer(g, won) {
 function finishQuestion(g) {
   if (g.status !== "question") return;
   clearTimeout(g.timer);
+  g.optionsVisible = true;
   g.status = "results";
   g.leaderboardVisible =
     !g.questions[g.index + 1] ||
@@ -1213,6 +1218,8 @@ function sendHostImages(ws, g, retry = false) {
   send(ws, "host_images", { code: g.code, images, retry });
 }
 async function startQuestion(g) {
+  // Pressed again while the question is still on its own: show the options.
+  if (g.status === "question" && !g.optionsVisible) return showOptions(g);
   if (
     !["lobby", "results", "round_intro", "last_question_intro"].includes(
       g.status,
@@ -1247,7 +1254,10 @@ async function startQuestion(g) {
   g.index++;
   g.imageTelemetry = new Map();
   g.leaderboardVisible = false;
-  g.startedAt = Date.now();
+  // The question lands on every screen alone. The clock — and the answer tiles —
+  // wait for the host to press again, so they can read the question out first.
+  g.optionsVisible = current(g).type === "buzzer";
+  g.startedAt = null;
   g.stats = {};
   for (const p of g.players.values()) {
     p.answered = false;
@@ -1271,14 +1281,28 @@ async function startQuestion(g) {
     });
   }
   g.status = "question";
-  g.deadline = g.startedAt + current(g).seconds * 1000;
+  g.deadline = null;
   sendHostImages(g.host, g);
   sendHostPreview(g);
   broadcast(g, "question_started", {
     game: state(g),
     question: question(g),
   });
-  g.timer = setTimeout(() => finishQuestion(g), current(g).seconds * 1000);
+}
+// Second press: the options appear and the countdown starts. Starting the clock
+// here is deliberate — nobody loses thinking time to the read-out before it.
+function showOptions(g) {
+  if (g.status !== "question") fail("This question is not waiting for options.");
+  if (g.optionsVisible) return;
+  const q = current(g);
+  if (!q) fail("There is no question to show.");
+  g.optionsVisible = true;
+  g.startedAt = Date.now();
+  g.deadline = g.startedAt + q.seconds * 1000;
+  clearTimeout(g.timer);
+  broadcast(g, "options_shown", { game: state(g), question: question(g) });
+  markLiveDirty(g);
+  g.timer = setTimeout(() => finishQuestion(g), q.seconds * 1000);
 }
 function sync(ws, g, type, extra = {}) {
   send(ws, type, {
@@ -1639,6 +1663,7 @@ wss.on("connection", (ws, req) => {
         }
         if (msg.type === "start_question" || msg.type === "next_question")
           return await startQuestion(g);
+        if (msg.type === "show_options") return showOptions(g);
         if (msg.type === "reveal_answers")
           return g.status === "buzzer" ? finishBuzzer(g, false) : finishQuestion(g);
         if (msg.type === "stop_buzzing") {
@@ -1704,8 +1729,10 @@ wss.on("connection", (ws, req) => {
       }
       if (msg.type === "submit_answer" && ws.role === "player") {
         const p = g.players.get(ws.playerId);
-        if (g.status !== "question" || Date.now() >= g.deadline)
-          fail("The answer window has closed.");
+        if (g.status !== "question") fail("The answer window has closed.");
+        if (!g.optionsVisible)
+          fail("The options are not on screen yet. Watch the big screen.");
+        if (Date.now() >= g.deadline) fail("The answer window has closed.");
         if (msg.questionId !== question(g).id)
           fail("This answer belongs to an older question.");
         if (p.answered) fail("Your answer is already locked in.");

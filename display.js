@@ -92,10 +92,13 @@
       stage.innerHTML = `<section class="display-question display-buzzer"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer">BUZZ</b></div><h1>${escape(question.text)}</h1><p class="display-instruction">${buzzOpen ? "Listen, then press BUZZ on your phone." : "Buzzing is closed."}</p><div class="display-buzzes">${queue.length ? `<ol>${queue.slice(0, 8).map((b) => `<li class="buzz-row buzz-${escape(b.status)}"><b class="buzz-pos">${b.position}</b><span class="buzz-name">${escape(b.name)}</span><span class="buzz-time">${(b.elapsedMs / 1000).toFixed(1)}s</span>${b.points ? `<span class="buzz-points">${b.points > 0 ? "+" : "−"}${Math.abs(b.points).toLocaleString()}</span>` : ""}</li>`).join("")}</ol>` : '<p class="muted">No one has buzzed in yet.</p>'}</div></section>`;
       tick();
     } else if (question) {
-      const key = `${game.status}:${question.index}:${question.id}`;
+      // Two steps on the projector too: the question lands alone, then the
+      // host presses again and the answers follow it in.
+      const optionsReady = question.optionsVisible !== false;
+      const key = `${game.status}:${question.index}:${question.id}:${optionsReady}`;
       const fresh = key !== revealKey;
       revealKey = key;
-      stage.innerHTML = `<section class="display-question"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer"></b></div><h1>${escape(question.text)}</h1><div class="display-media">${question.media && question.mediaType?.startsWith("image/") ? `<img loading="eager" fetchpriority="high" decoding="async" src="${escape(question.media)}" alt="Question image">` : question.media ? "<p>Audio question · Listen to the host.</p>" : ""}</div><div class="display-options${fresh ? " reveal-answers" : ""}" style="--reveal-delay:${fresh ? "1.2s" : "0s"}">${(question.options || []).map((o, i) => {
+      stage.innerHTML = `<section class="display-question"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer"></b></div><h1>${escape(question.text)}</h1><div class="display-media">${question.media && question.mediaType?.startsWith("image/") ? `<img loading="eager" fetchpriority="high" decoding="async" src="${escape(question.media)}" alt="Question image">` : question.media ? "<p>Audio question · Listen to the host.</p>" : ""}</div><div class="display-options${fresh ? " reveal-answers" : ""}" style="--reveal-delay:${fresh ? "0.25s" : "0s"}">${optionsReady ? "" : '<p class="display-readout">The question is on screen. The answers appear next.</p>'}${(optionsReady ? question.options || [] : []).map((o, i) => {
         const count = Number(result?.stats?.[i]) || 0;
         const votes = Object.values(result?.stats || {}).reduce(
           (sum, n) => sum + (Number(n) || 0),
@@ -103,7 +106,7 @@
         );
         const share = votes ? Math.round((count / votes) * 100) : 0;
         return `<div class="display-option tile-${i} ${game.status === "results" && result?.correctIndices?.includes(i) ? "display-correct" : ""}" style="--i:${i}"><span aria-hidden="true">${symbols[i]}</span><span class="display-option-copy">${escape(o)}</span>${game.status === "results" ? `<span class="display-answer-bar"><i style="width:${share}%"${count ? "" : ' class="is-empty"'}></i><b>${count}</b></span>` : ""}</div>`;
-      }).join("")}</div><p class="display-instruction">${game.status === "results" ? "Correct answer: " + escape(result?.correct || "") : question.type === "multi" ? "Select all correct answers, then submit on your device." : question.type === "text" ? "Type your answer on your device." : "Choose your answer on your device."}</p></section>`;
+      }).join("")}</div><p class="display-instruction">${!optionsReady ? "Listen to the question." : game.status === "results" ? "Correct answer: " + escape(result?.correct || "") : question.type === "multi" ? "Select all correct answers, then submit on your device." : question.type === "text" ? "Type your answer on your device." : "Choose your answer on your device."}</p></section>`;
       $(".display-media img")?.addEventListener("load", fit, { once: true });
       tick();
     }
@@ -114,10 +117,12 @@
     if (el && game)
       el.textContent =
         game.status === "question"
-          ? Math.max(
-              0,
-              Math.ceil((game.deadline - Date.now() - offset) / 1000),
-            ) + "s"
+          ? game.deadline
+            ? Math.max(
+                0,
+                Math.ceil((game.deadline - Date.now() - offset) / 1000),
+              ) + "s"
+            : "READY"
           : "RESULTS";
   }
   function connect() {
@@ -180,7 +185,8 @@
         buzzes = m.buzzes || [];
         buzzOpen = m.open !== false;
         render();
-      } else if (m.type === "question_started") {
+      } else if (m.type === "question_started" || m.type === "options_shown") {
+        // Step one is the question alone; step two adds the answers.
         question = m.question;
         result = null;
         board = false;

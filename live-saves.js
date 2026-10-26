@@ -47,6 +47,7 @@ function serialize(g) {
       pending: p.pending || 0,
       resumeToken: p.resumeToken,
     })),
+    optionsVisible: !!g.optionsVisible,
     buzzes: (g.buzzes || []).map((b) => ({
       playerId: b.playerId,
       at: b.at,
@@ -90,6 +91,8 @@ function restore(doc) {
     deadline: doc.deadline || null,
     startedAt: doc.startedAt || null,
     leaderboardVisible: !!doc.leaderboardVisible,
+    // A room saved before this step existed had its options on screen already.
+    optionsVisible: doc.optionsVisible !== false,
     musicState: doc.musicState || { playing: true, volume: 0.3 },
     reportId: doc.reportId || null,
     questions,

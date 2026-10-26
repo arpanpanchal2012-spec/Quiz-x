@@ -6924,3 +6924,137 @@ body.reordering {
   align-items: center;
   gap: 12px;
 }
+
+/* ===== rc.17 — the faces move, and the start is two presses ==============
+   Kahoot's characters are alive; ours should be too. Only transforms are
+   animated, so a room of a hundred phones stays smooth.
+   ======================================================================= */
+
+@keyframes avatarBob {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  35% { transform: translateY(-4px) rotate(-4deg) scale(1.03); }
+  70% { transform: translateY(-1px) rotate(3deg) scale(1); }
+}
+@keyframes avatarSway {
+  0%, 100% { transform: rotate(-6deg) translateY(0); }
+  50% { transform: rotate(6deg) translateY(-2px); }
+}
+@keyframes avatarHop {
+  0% { transform: translateY(0) scale(1); }
+  25% { transform: translateY(-7px) scale(1.1) rotate(-6deg); }
+  50% { transform: translateY(0) scale(0.98); }
+  70% { transform: translateY(-3px) scale(1.04) rotate(4deg); }
+  100% { transform: translateY(0) scale(1); }
+}
+@keyframes avatarPop {
+  from { transform: scale(0.4); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.avatar-badge {
+  animation: avatarBob 2.6s ease-in-out infinite;
+  animation-delay: var(--phase, 0s);
+  will-change: transform;
+  transition: transform 0.18s ease-out;
+}
+.avatar-badge[data-beat="2"] { animation-name: avatarSway; animation-duration: 3.2s; }
+.avatar-badge[data-beat="3"] { animation-duration: 2.1s; }
+
+/* The player's own face is the biggest thing on their phone: it breathes. */
+.avatar-badge.avatar-large {
+  animation: avatarBob 2.2s ease-in-out infinite;
+  animation-delay: var(--phase, 0s);
+}
+
+/* Someone arriving is worth noticing. */
+.join-chip.just-joined .avatar-badge {
+  animation: avatarHop 0.9s ease-out 2, avatarBob 2.6s ease-in-out 1.8s infinite;
+}
+.join-chip.just-joined {
+  animation: avatarPop 0.35s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+/* A face reacts when the host points at it. */
+.join-chip:hover .avatar-badge,
+.leaderboard li:hover .avatar-badge {
+  animation: avatarHop 0.7s ease-out 1;
+}
+
+/* Standings and podium: a slow sway so the board is never static. */
+.podium .avatar-badge {
+  animation: avatarHop 1.6s ease-in-out infinite;
+  animation-play-state: paused;
+}
+.display-standings li .avatar-badge {
+  animation-duration: 3.4s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar-badge,
+  .avatar-badge.avatar-large,
+  .display-standings li .avatar-badge {
+    animation: none;
+  }
+  .join-chip.just-joined,
+  .join-chip.just-joined .avatar-badge {
+    animation: none;
+  }
+}
+
+/* Step one of a question: the text, on its own. */
+.readout-note {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 24px;
+  border: 2px dashed #d8cff0;
+  border-radius: 14px;
+  background: #faf8ff;
+  color: #5c4f79;
+  font-size: 16px;
+  font-weight: 600;
+  animation: avatarPop 0.3s ease-out both;
+}
+.readout-note span {
+  font-size: 26px;
+}
+.readout-note p {
+  margin: 0;
+}
+.display-readout {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 26px;
+  border: 3px dashed rgb(255 255 255 / 0.5);
+  border-radius: 14px;
+  color: rgb(255 255 255 / 0.9);
+  font-size: calc(var(--display-answer, 30px) * 0.7);
+  font-weight: 700;
+  text-align: center;
+}
+
+/* The lobby face is the hero of the phone screen. */
+.avatar-badge.avatar-hero {
+  width: 96px;
+  height: 96px;
+  font-size: 54px;
+  animation: avatarHero 3.2s ease-in-out infinite;
+  animation-delay: var(--phase, 0s);
+  box-shadow:
+    inset 0 0 0 4px rgb(255 255 255 / 0.85),
+    0 12px 28px rgb(30 20 60 / 0.16);
+}
+@keyframes avatarHero {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  30% { transform: translateY(-7px) rotate(-5deg) scale(1.05); }
+  60% { transform: translateY(0) rotate(4deg) scale(1.02); }
+}
+.player-identity .avatar-badge.avatar-hero {
+  margin: 2px 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar-badge.avatar-hero {
+    animation: none;
+  }
+}

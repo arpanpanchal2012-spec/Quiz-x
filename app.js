@@ -497,9 +497,17 @@ function avatarTint(value) {
   for (const c of String(value || "")) hash = (hash * 31 + c.codePointAt(0)) % 997;
   return AVATAR_TINTS[hash % AVATAR_TINTS.length];
 }
+// The faces move. Each one sways to its own slow rhythm — a different rhythm
+// per player, so a lobby full of people looks alive rather than choreographed.
+function avatarRhythm(seed) {
+  let hash = 0;
+  for (const c of String(seed || "")) hash = (hash * 31 + c.codePointAt(0)) % 997;
+  return { phase: `-${(hash % 20) / 10}s`, beat: (hash % 3) + 1 };
+}
 function avatarHTML(player, extra = "") {
   const face = player?.avatar || "🙂";
-  return `<span class="avatar-badge ${avatarTint(face)}${extra ? " " + extra : ""}" aria-hidden="true">${e(face)}</span>`;
+  const { phase, beat } = avatarRhythm(`${face}${player?.name || ""}`);
+  return `<span class="avatar-badge ${avatarTint(face)}${extra ? " " + extra : ""}" style="--phase:${phase}" data-beat="${beat}" aria-hidden="true">${e(face)}</span>`;
 }
 let activeEditorQuestion = null;
 // One clock per round. A round almost always wants the same time on every
@@ -1607,6 +1615,17 @@ function handleMessage(m) {
     renderPlayers();
     return;
   }
+  if (m.type === "options_shown") {
+    // Step two: the same question, now with its answers and a running clock.
+    hideBuzzer();
+    answerPending = false;
+    game = m.game;
+    liveQuestion = m.question;
+    locked = false;
+    renderQuestion();
+    renderPlayers();
+    return;
+  }
   if (m.type === "answer_received") {
     answerPending = false;
     locked = true;
@@ -1838,8 +1857,14 @@ function renderQuestion() {
   $(`#${prefix}Round`).textContent =
     `${q.roundLabel || roundTitle(q.roundIndex, q.round)}${q.lastInRound ? " · Last question of this round" : ""}`;
   $(`#${prefix}${participantMode ? "Title" : "Question"}`).textContent = q.text;
-  $(`#${prefix}Hint`).textContent =
-    q.type === "text"
+  // Step one: the question is on screen on its own and the host reads it out.
+  // Step two begins when the host presses again and the options arrive.
+  const optionsReady = q.optionsVisible !== false;
+  $(`#${prefix}Hint`).textContent = !optionsReady
+    ? participantMode
+      ? "Read the question on the big screen. The options are coming."
+      : "Read it out. Press “Show options” when the room is ready."
+    : q.type === "text"
       ? "Type your answer and lock it in."
       : q.type === "multi"
         ? "Select all correct answers, then submit. Wrong selections reduce partial credit."
@@ -1897,7 +1922,11 @@ function renderQuestion() {
       { duration: 420, easing: "cubic-bezier(.2,.8,.3,1)" },
     );
   }
-  if (q.type !== "text") {
+  if (!optionsReady) {
+    options.innerHTML = participantMode
+      ? ""
+      : `<div class="readout-note"><span aria-hidden="true">👀</span><p>Question on screen. The options appear the moment you press <b>Show options</b>.</p></div>`;
+  } else if (q.type !== "text") {
     q.options.forEach((option, i) => {
       const button = document.createElement(participantMode ? "button" : "div");
       button.className = participantMode
@@ -1933,28 +1962,35 @@ function renderQuestion() {
     answerSummary.textContent = "";
   }
   if (participantMode) {
-    $("#textAnswerForm").hidden = q.type !== "text";
+    $("#textAnswerForm").hidden = q.type !== "text" || !optionsReady;
     $("#textAnswer").value = "";
-    $("#answerStatus").textContent = locked
-      ? "Your answer is locked in."
-      : "Your first submission is final.";
+    $("#answerStatus").textContent = !optionsReady
+      ? "The options are coming. Watch the big screen."
+      : locked
+        ? "Your answer is locked in."
+        : "Your first submission is final.";
     lockAnswers();
   } else {
     $("#hostQuestionNumber").textContent =
       `QUESTION ${q.index + 1} OF ${q.total} · UP TO ${q.points} POINTS`;
-    $("#nextQuestion").textContent = "Reveal answers";
+    // One button, three steps: start the question, show the options, reveal.
+    $("#nextQuestion").textContent = optionsReady
+      ? "Reveal answers"
+      : "Show options  ▶";
     $("#nextQuestion").disabled = false;
   }
 }
 function lockAnswers() {
-  const disabled = locked || game?.status !== "question";
+  const disabled =
+    locked || game?.status !== "question" || game?.optionsVisible === false;
   $("#submitMulti").disabled = disabled || !multiSelection.size;
   $$(
     "#playerOptions button, #textAnswerForm input, #textAnswerForm button",
   ).forEach((b) => (b.disabled = disabled));
 }
 function submitAnswer(answer, button) {
-  if (locked || game?.status !== "question") return;
+  if (locked || game?.status !== "question" || game?.optionsVisible === false)
+    return;
   locked = true;
   answerPending = true;
   lockAnswers();
@@ -2097,15 +2133,20 @@ function renderPlayers() {
 }
 // Before the first question the stage shows who is in the room, faces first —
 // the host can see at a glance that everyone has arrived.
+const seenPlayers = new Set();
 function renderJoinWall() {
   const wall = $("#hostOptions");
   if (!wall || $("#hostLeaderboard")?.hidden === false) return;
   const seated = game.participants.slice(0, 60);
+  const fresh = new Set(
+    game.participants.map((p) => p.id).filter((id) => !seenPlayers.has(id)),
+  );
+  for (const p of game.participants) seenPlayers.add(p.id);
   wall.innerHTML = seated.length
     ? `<div class="join-wall" aria-label="${seated.length} players ready">${seated
         .map(
           (p) =>
-            `<div class="join-chip${p.connected ? "" : " is-away"}">${avatarHTML(p)}<span>${e(p.name)}</span></div>`,
+            `<div class="join-chip${p.connected ? "" : " is-away"}${fresh.has(p.id) ? " just-joined" : ""}">${avatarHTML(p)}<span>${e(p.name)}</span></div>`,
         )
         .join("")}</div>${game.participants.length > 60 ? `<p class="muted">and ${game.participants.length - 60} more</p>` : ""}`
     : `<div class="join-wall is-empty"><span class="join-wall-face" aria-hidden="true">🎟️</span><p>Waiting for the first player. Share the join link or the code above.</p></div>`;
@@ -2127,36 +2168,45 @@ function renderIdentity() {
   chip.hidden = !me || roomy;
   if (!me) return;
   $("#playerAvatar").textContent = me.avatar || "🙂";
+  // In the lobby the face is the hero of the screen: big enough to wave at.
   $("#playerAvatar").className =
-    "avatar-badge avatar-large " + avatarTint(me.avatar);
+    "avatar-badge avatar-large" +
+    (roomy ? " avatar-hero" : "") +
+    " " +
+    avatarTint(me.avatar);
+  $("#playerAvatar").style.setProperty(
+    "--phase",
+    avatarRhythm(`${me.avatar}${me.name}`).phase,
+  );
   $("#playerName").textContent = me.name;
   chip.className = "player-chip";
   chip.innerHTML = `${avatarHTML(me)}<b>${e(me.name)}</b>`;
 }
 setInterval(() => {
   if (!game) return;
-  const remaining =
-    game.status === "question"
-      ? Math.max(0, Math.ceil((game.deadline - Date.now() - offset) / 1000))
-      : 0;
+  // While the host is still reading the question out there is no clock yet.
+  const counting = game.status === "question" && !!game.deadline;
+  const remaining = counting
+    ? Math.max(0, Math.ceil((game.deadline - Date.now() - offset) / 1000))
+    : 0;
   sound.remaining(remaining);
   $(participantMode ? "#playerTimer" : "#hostTimer").classList.toggle(
     "timer-urgent",
-    game.status === "question" && remaining <= 5,
+    counting && remaining <= 5,
   );
-  const text =
-    game.status === "question"
-      ? Math.max(0, Math.ceil((game.deadline - Date.now() - offset) / 1000)) +
-        "s"
-      : ["lobby", "round_intro", "last_question_intro"].includes(game.status)
-        ? "READY"
-        : game.status === "ended"
-          ? "FINISHED"
-          : "RESULTS";
+  const text = counting
+    ? remaining + "s"
+    : ["lobby", "round_intro", "last_question_intro"].includes(game.status) ||
+        game.status === "question"
+      ? "READY"
+      : game.status === "ended"
+        ? "FINISHED"
+        : "RESULTS";
   $(participantMode ? "#playerTimer" : "#hostTimer").textContent = text;
   if (
     participantMode &&
     game.status === "question" &&
+    game.deadline &&
     game.deadline <= Date.now() + offset
   ) {
     locked = true;
@@ -2166,6 +2216,11 @@ setInterval(() => {
 $("#nextQuestion").onclick = () => {
   if (!game) return;
   sound.enable();
+  if (game.status === "question" && game.optionsVisible === false) {
+    // The read-out is over: the options appear and the clock starts.
+    send("show_options");
+    return;
+  }
   if (game.status === "question") {
     if (confirm("End the timer now and reveal the correct answer?"))
       send("reveal_answers");
