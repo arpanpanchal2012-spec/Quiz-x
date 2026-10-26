@@ -22,6 +22,18 @@ module.exports = function workspaceFeatures({
   // A deleted assignment is recoverable for seven days, then swept away.
   const RECOVERY_DAYS = 7;
   const RECOVERY_MS = RECOVERY_DAYS * 24 * 60 * 60 * 1000;
+  // How many people may join one assigned quiz. A self-paced quiz can be open
+  // for days, so the default leaves room for a bigger group than a live room.
+  // One participant answering a 200-question quiz makes about two requests per
+  // question, so the old 500 an hour could bite on a long quiz.
+  const PARTICIPANT_POSTS_PER_HOUR = Math.min(
+    20000,
+    Math.max(100, Number(process.env.PARTICIPANT_POSTS_PER_HOUR) || 4000),
+  );
+  const ATTEMPTS_PER_QUIZ = Math.min(
+    5000,
+    Math.max(1, Number(process.env.ATTEMPTS_PER_QUIZ) || 200),
+  );
   // Removes assignments whose recovery window has passed. Safe to call often:
   // it only ever touches rows already marked deleted.
   async function purgeDeletedPublications() {
@@ -394,7 +406,7 @@ module.exports = function workspaceFeatures({
     }
     if (p === "/api/invitations" && req.method === "POST") {
       const host = await requireUser(req);
-      rate("invite:" + host.id, 5, 24 * 60 * 60 * 1000);
+      rate("invite:" + host.id, 20, 24 * 60 * 60 * 1000);
       const secret = crypto.randomBytes(32).toString("hex"),
         expires = Date.now() + 24 * 60 * 60 * 1000;
       await db
@@ -405,7 +417,7 @@ module.exports = function workspaceFeatures({
     if (p === "/api/publications") {
       const host = await requireUser(req);
       if (req.method === "POST") {
-        rate("publish:" + host.id, 20, 24 * 60 * 60 * 1000);
+        rate("publish:" + host.id, 100, 24 * 60 * 60 * 1000);
         const x = await data(req);
         if (!(await owns("quizzes", String(x.quizId), host.id)))
           fail("Quiz not found.", 404);
@@ -452,6 +464,7 @@ module.exports = function workspaceFeatures({
             created: Number(row.created),
             closes: Number(row.closes),
             settings: publicationSettings(row),
+            attemptLimit: ATTEMPTS_PER_QUIZ,
             participants: Number(
               (
                 await db
@@ -483,6 +496,7 @@ module.exports = function workspaceFeatures({
           closes: Number(row.closes),
           deleted: Number(row.deleted),
           purgeAt: Number(row.deleted) + RECOVERY_MS,
+          attemptLimit: ATTEMPTS_PER_QUIZ,
           participants: Number(
             (
               await db
@@ -663,7 +677,7 @@ module.exports = function workspaceFeatures({
     }
     if (req.method !== "POST") return false;
     if (!b) fail("Allow cookies and reload this page before starting.");
-    rate("async:" + hash(b), 500, 60 * 60 * 1000);
+    rate("async:" + hash(b), PARTICIPANT_POSTS_PER_HOUR, 60 * 60 * 1000);
     const x = await data(req);
     let state;
     await db.withTransaction(async (tx) => {
@@ -695,9 +709,11 @@ module.exports = function workspaceFeatures({
                   )
                   .get(id)
               ).n,
-            ) >= 100
+            ) >= ATTEMPTS_PER_QUIZ
           )
-            fail("This published quiz has reached its 100-attempt limit.");
+            fail(
+              `This published quiz has reached its ${ATTEMPTS_PER_QUIZ}-attempt limit.`,
+            );
           const name = bounded(x.name, 30, "nickname");
           attempt = {
             id: crypto.randomUUID(),

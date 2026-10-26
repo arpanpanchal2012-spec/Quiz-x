@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#513293" />
     <title>Quizzes · Live learning, together</title>
-    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.12" />
+    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.16" />
   </head>
   <body>
     <div class="app-shell" id="hostApp">
@@ -159,8 +159,26 @@
             <div class="button-row">
               <button class="secondary-btn" data-import>
                 ↑ Import questions</button
+              ><button class="secondary-btn" data-quiz-file>
+                ⇄ Move a quiz</button
               ><button class="primary-btn" data-new>＋ Create quiz</button>
+              <input
+                id="quizFileInput"
+                type="file"
+                accept="application/json,.json"
+                hidden
+              />
             </div>
+          </div>
+          <p class="muted" id="quizFileStatus" role="status" hidden></p>
+          <div class="running-room-strip" id="liveRoomStrip" hidden>
+            <span
+              ><b>▶ A game is still running.</b>
+              <span id="liveRoomText"></span
+            ></span>
+            <button class="primary-btn" id="rejoinRoom" type="button">
+              Rejoin as host
+            </button>
           </div>
           <div class="studio-recovery-strip">
             <span
@@ -487,6 +505,104 @@
               </div>
             </div>
           </div>
+          <section class="panel limits-panel">
+            <div class="page-title">
+              <div>
+                <h2>Amounts and limits</h2>
+                <p class="muted">
+                  Every fixed number in the app, in one place, so nothing
+                  surprises you half way through writing a quiz.
+                </p>
+              </div>
+            </div>
+            <div class="limit-grid">
+              <div class="limit-group">
+                <h3>Quizzes</h3>
+                <dl>
+                  <dt>Questions per quiz</dt><dd>200</dd>
+                  <dt>Rounds per quiz</dt><dd>20</dd>
+                  <dt>Answer choices</dt><dd>2–6 per question</dd>
+                  <dt>Accepted answers</dt><dd>20 per question, 200 characters each</dd>
+                  <dt>Question text</dt><dd>1,000 characters</dd>
+                  <dt>Private notes</dt><dd>1,000 characters</dd>
+                  <dt>Quiz title</dt><dd>120 characters</dd>
+                  <dt>Description</dt><dd>1,000 characters</dd>
+                  <dt>Round name</dt><dd>100 characters</dd>
+                  <dt>Timer</dt>
+                  <dd>
+                    5–120 seconds per question · the round buttons offer 10, 15,
+                    20, 30, 35, 40, 45, 60, 90 or 120
+                  </dd>
+                  <dt>Points per question</dt><dd>100–5,000</dd>
+                </dl>
+              </div>
+              <div class="limit-group">
+                <h3>Files and imports</h3>
+                <dl>
+                  <dt>Picture or sound per question</dt><dd>10 MB</dd>
+                  <dt>Images before upload</dt>
+                  <dd>Resized to 1,600 px on the long edge and re-compressed in your browser</dd>
+                  <dt>Files added per hour</dt><dd>400 per account</dd>
+                  <dt>Word/PDF/text import</dt><dd>5 MB or 200,000 characters</dd>
+                  <dt>Saved backup documents</dt><dd>500,000 characters</dd>
+                  <dt>Backups generated</dt><dd>10 per hour</dd>
+                </dl>
+              </div>
+              <div class="limit-group">
+                <h3>Live games</h3>
+                <dl>
+                  <dt>Players in one room</dt><dd>100</dd>
+                  <dt>Nickname</dt><dd>30 characters, unique in the room</dd>
+                  <dt>Player faces</dt>
+                  <dd>
+                    24 in the set, never repeated until the room has more than
+                    24 players
+                  </dd>
+                  <dt>Answer reveal</dt>
+                  <dd>
+                    1.5 seconds after the question on the host screen and
+                    projector, 0.15 on a phone · the timer starts immediately
+                  </dd>
+                  <dt>Open rooms per host</dt><dd>3 at the same time</dd>
+                  <dt>Projector screens</dt><dd>4 per room</dd>
+                  <dt>Host reconnect window</dt><dd>5 minutes before the room closes</dd>
+                  <dt>Unresumed room</dt><dd>Kept 24 hours, then closed with a report</dd>
+                </dl>
+              </div>
+              <div class="limit-group">
+                <h3>Assigned quizzes</h3>
+                <dl>
+                  <dt>Attempts per link</dt><dd>200</dd>
+                  <dt>Attempts per browser</dt><dd>1, remembered for 180 days</dd>
+                  <dt>Assignments per day</dt><dd>100</dd>
+                  <dt>Deleted assignment</dt><dd>Recoverable for 7 days</dd>
+                  <dt>Closing time</dt><dd>Future, at most one year ahead</dd>
+                </dl>
+              </div>
+              <div class="limit-group">
+                <h3>Sign in and account</h3>
+                <dl>
+                  <dt>Stay signed in</dt><dd>12 hours after your last visit</dd>
+                  <dt>Password</dt><dd>8–128 characters</dd>
+                  <dt>Invitations</dt><dd>20 per day, each valid 24 hours</dd>
+                  <dt>Sign-in attempts</dt><dd>12 per 15 minutes</dd>
+                </dl>
+              </div>
+              <div class="limit-group">
+                <h3>What never expires on its own</h3>
+                <dl>
+                  <dt>Saved quizzes and pictures</dt><dd>Kept until you delete them</dd>
+                  <dt>Session reports</dt><dd>Kept until you clear them</dd>
+                  <dt>Assigned-quiz results</dt><dd>Kept until you delete them</dd>
+                </dl>
+              </div>
+            </div>
+            <p class="muted">
+              Most of these can be changed by an operator with an environment
+              variable on the hosting dashboard — see <b>LIMITS.md</b> in the
+              package.
+            </p>
+          </section>
           <form class="panel password-form" id="recoveryCodeForm">
             <h2>Save an account recovery code</h2>
             <p class="muted">
@@ -727,6 +843,7 @@
                 </div>
               </div>
               <div class="answer-grid" id="hostOptions"></div>
+              <p class="answer-summary" id="hostAnswerSummary" hidden></p>
               <section
                 id="hostBuzzer"
                 class="buzzer-host"
@@ -885,12 +1002,18 @@
             <div id="playerMusic"></div>
             <div class="player-meta">
               <span id="playerRound">LOBBY</span
+              ><span class="player-chip" id="playerChip" hidden></span
               ><b id="playerTimer" role="timer"></b>
+            </div>
+            <div class="player-identity" id="playerIdentity" hidden>
+              <span class="avatar-badge avatar-large" id="playerAvatar"></span>
+              <b id="playerName"></b>
             </div>
             <h2 id="playerTitle">You’re in!</h2>
             <p class="muted" id="playerHint">Waiting for your host to start.</p>
             <div id="playerMedia"></div>
             <div class="player-answers" id="playerOptions"></div>
+            <p class="answer-summary" id="playerAnswerSummary" hidden></p>
             <section id="playerBuzzer" class="buzzer-player" hidden>
               <button class="buzz-btn" id="buzzButton" type="button">BUZZ</button>
               <p class="buzz-note" id="buzzNote">
@@ -1136,10 +1259,10 @@ Answer: together</pre
       </p>
       <div id="draftRecoveryList"></div>
     </dialog>
-    <script src="/qr-code.js?v=0.9.0-rc.12"></script>
-    <script src="/quiz-sound.js?v=0.9.0-rc.12"></script>
-    <script src="/app.js?v=0.9.0-rc.12"></script>
-    <script src="/extensions.js?v=0.9.0-rc.12"></script>
-    <script src="/professional.js?v=0.9.0-rc.12"></script>
+    <script src="/qr-code.js?v=0.9.0-rc.16"></script>
+    <script src="/quiz-sound.js?v=0.9.0-rc.16"></script>
+    <script src="/app.js?v=0.9.0-rc.16"></script>
+    <script src="/extensions.js?v=0.9.0-rc.16"></script>
+    <script src="/professional.js?v=0.9.0-rc.16"></script>
   </body>
 </html>

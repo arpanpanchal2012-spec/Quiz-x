@@ -53,7 +53,17 @@ const studio = require("./studio-server")({
 const PORT = Number(process.env.PORT || 4173);
 const games = new Map();
 const limits = new Map();
-const SESSION_MS = 12 * 60 * 60 * 1000;
+// How long a signed-in host stays signed in. The clock runs from the last time
+// the host used the app, not from the moment they signed in, so an evening of
+// preparation does not turn into a surprise sign-out mid-event.
+const SESSION_MS =
+  Math.min(30 * 24, Math.max(1, Number(process.env.SESSION_HOURS) || 12)) *
+  60 *
+  60 *
+  1000;
+// A hard cap no amount of activity can extend, so a forgotten tab on a shared
+// laptop cannot stay signed in forever.
+const SESSION_MAX_MS = 30 * 24 * 60 * 60 * 1000;
 // Shared NAT venues and sleeping laptops can drop the host mid-event. The
 // default grace period is unchanged; operators may extend it up to 60 minutes
 // with HOST_RECONNECT_MINUTES before an abandoned room is closed and reported.
@@ -142,12 +152,24 @@ function isSiteAdmin(host) {
 async function user(req) {
   const t = token(req);
   if (!t) return null;
+  const now = Date.now();
   const host = await db
     .prepare(
-      "SELECT a.id,a.email,a.organization FROM sessions s JOIN admins a ON a.id=s.admin_id WHERE s.token=? AND s.expires>?",
+      "SELECT a.id,a.email,a.organization,s.expires AS expires FROM sessions s JOIN admins a ON a.id=s.admin_id WHERE s.token=? AND s.expires>?",
     )
-    .get(hash(t), Date.now());
-  return host ? { ...host, isSiteAdmin: isSiteAdmin(host) } : null;
+    .get(hash(t), now);
+  if (!host) return null;
+  // Sliding session: once half the window has gone, push it back out. The
+  // update is best-effort and never delays or fails the request.
+  const { expires, ...rest } = host;
+  const remaining = Number(expires) - now;
+  if (remaining < SESSION_MS / 2 && remaining < SESSION_MAX_MS) {
+    const next = Math.min(now + SESSION_MS, now + SESSION_MAX_MS);
+    db.prepare("UPDATE sessions SET expires=? WHERE token=? AND expires<?")
+      .run(next, hash(t), next)
+      .catch(() => {});
+  }
+  return { ...rest, isSiteAdmin: isSiteAdmin(rest) };
 }
 async function requireUser(req) {
   const u = await user(req);
@@ -535,7 +557,10 @@ const server = http.createServer(async (req, res) => {
           ok: true,
         },
         {
-          "Set-Cookie": cookie(req, t, SESSION_MS / 1000),
+          // The browser keeps the cookie as long as any session could live; the
+          // database expiry is what actually ends a session, and it slides with
+          // use. Signing out deletes the row immediately.
+          "Set-Cookie": cookie(req, t, SESSION_MAX_MS / 1000),
         },
       );
     }
@@ -673,6 +698,23 @@ const server = http.createServer(async (req, res) => {
         );
         return json(res, 200, result);
       }
+      const quizExport = p.match(/^\/api\/quizzes\/([a-f0-9-]+)\/export$/);
+      if (quizExport && req.method === "GET") {
+        if (!(await owns("quizzes", quizExport[1], admin.id)))
+          fail("Quiz not found.", 404);
+        const row = await db
+          .prepare("SELECT document FROM quizzes WHERE id=?")
+          .get(quizExport[1]);
+        if (!row) fail("Quiz not found.", 404);
+        const file = await buildQuizFile(JSON.parse(row.document));
+        return json(res, 200, file, {
+          "Content-Disposition": `attachment; filename="quizzes-quiz-${quizExport[1].slice(0, 8)}.json"`,
+        });
+      }
+      if (p === "/api/quizzes/import" && req.method === "POST") {
+        rate("quiz-import:" + admin.id, 60, 60 * 60 * 1000);
+        return json(res, 201, await importQuizFile(await data(req, 64 * 1024 * 1024), admin));
+      }
       const liveExport = p.match(/^\/api\/live\/(QZ[A-Z0-9]{6})\/export$/);
       if (liveExport && req.method === "GET") {
         const g = games.get(liveExport[1]);
@@ -682,6 +724,25 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, bundle, {
           "Content-Disposition": `attachment; filename="quizzes-live-${g.code}.json"`,
         });
+      }
+      if (p === "/api/live/rooms" && req.method === "GET") {
+        return json(
+          res,
+          200,
+          [...games.values()]
+            .filter((g) => g.adminId === admin.id && g.status !== "ended")
+            .sort((a, b) => b.created - a.created)
+            .map((g) => ({
+              code: g.code,
+              title: g.quiz.title,
+              status: g.status,
+              index: g.index,
+              total: g.questions.length,
+              players: g.players.size,
+              hostConnected: !!g.host,
+              created: g.created,
+            })),
+        );
       }
       if (p === "/api/live/import" && req.method === "POST") {
         rate("live-import:" + admin.id, 10, 60 * 60 * 1000);
@@ -861,8 +922,38 @@ function recordAnswer(g, entry) {
 // results are untouched: only the cosmetic "who has answered / who is online"
 // list is throttled, and every phase broadcast still carries a fresh roster.
 const ROSTER_THROTTLE_MS = 700;
+// Room size. Free containers get little memory and bandwidth per event, so the
+// default stays at 100. An operator with a larger plan can raise it without a
+// code change: PLAYERS_PER_GAME=120.
+const PLAYERS_PER_GAME = Math.min(
+  500,
+  Math.max(2, Number(process.env.PLAYERS_PER_GAME) || 100),
+);
 // Percentage of the question's points lost by a wrong buzz, chosen per question.
 const BUZZ_PENALTIES = [0, 25, 50, 100];
+// Every player is given a face when they join, so the lobby, the leaderboard and
+// their own phone can show the same friendly character. Deliberately plain emoji:
+// they render everywhere, need no download, and carry no one else's artwork.
+const AVATARS = [
+  "🦊", "🐼", "🐸", "🐯", "🦉", "🐙", "🦄", "🐧",
+  "🐨", "🦁", "🐻", "🐵", "🐺", "🐰", "🐹", "🐮",
+  "🐷", "🐔", "🦖", "🐳", "🦋", "🦇", "🐿️", "🦔",
+];
+// A joining player takes a face nobody else in that room is using yet.
+function pickAvatar(g) {
+  const used = new Set([...(g?.players?.values() || [])].map((p) => p.avatar));
+  const free = AVATARS.filter((a) => !used.has(a));
+  const pool = free.length ? free : AVATARS;
+  return pool[crypto.randomInt(pool.length)];
+}
+// A room restored from a save made before faces existed still gets one, and it
+// stays the same face on every later restore.
+function avatarFor(p) {
+  if (p.avatar) return p.avatar;
+  let hash = 0;
+  for (const c of String(p.id || "")) hash = (hash * 31 + c.codePointAt(0)) % 1e6;
+  return AVATARS[hash % AVATARS.length];
+}
 const rosterPending = new Map();
 function clearRoster(g) {
   const entry = rosterPending.get(g.code);
@@ -896,6 +987,7 @@ function ranking(g) {
       id: p.id,
       rank: i + 1,
       name: p.name,
+      avatar: p.avatar || "",
       score: p.score,
     }));
 }
@@ -922,6 +1014,7 @@ function state(g) {
     participants: [...g.players.values()].map((p) => ({
       id: p.id,
       name: p.name,
+      avatar: p.avatar || "",
       score: p.score,
       answered: p.answered,
       connected: !!p.ws && p.ws.readyState === 1,
@@ -1316,6 +1409,40 @@ wss.on("connection", (ws, req) => {
           music: features.mediaURL(quiz.music),
         });
       }
+      if (msg.type === "claim_host") {
+        // The host's laptop died, or the tab was closed, and with it the token
+        // that lived in that tab. The account that owns the room may take the
+        // room back from any signed-in browser: a fresh token is minted, the
+        // abandoned connection is dropped, and the room carries on untouched.
+        const admin = await requireUser(req);
+        if (ws.readyState !== 1) return;
+        const g = games.get(String(msg.code || "").toUpperCase());
+        if (!g) fail("That game is not running on this site.", 404);
+        if (g.adminId !== admin.id)
+          fail("That game belongs to another account.", 403);
+        if (g.status === "ended") fail("That game has already finished.");
+        g.hostToken = crypto.randomBytes(32).toString("hex");
+        if (g.host && g.host !== ws)
+          g.host.close(4000, "Host moved to another connection");
+        clearTimeout(g.orphanTimer);
+        g.host = ws;
+        if (g.displaySession !== hash(token(req)))
+          for (const client of g.clients)
+            if (client.role === "display")
+              client.close(4000, "Host session changed; reconnect");
+        g.displaySession = hash(token(req));
+        g.clients.add(ws);
+        ws.game = g;
+        ws.role = "host";
+        ws.adminId = admin.id;
+        ws.sessionHash = hash(token(req));
+        live.saveQuietly(g);
+        broadcast(g, "host_online", {});
+        return sync(ws, g, "host_resumed", {
+          hostToken: g.hostToken,
+          music: features.mediaURL(g.quiz.music),
+        });
+      }
       if (msg.type === "resume_host") {
         const admin = await requireUser(req);
         if (ws.readyState !== 1) return;
@@ -1389,17 +1516,19 @@ wss.on("connection", (ws, req) => {
             p.ws.close(4000, "Player moved to another connection");
         } else {
           if (g.status === "ended") fail("This game has ended.");
-          if (g.players.size >= 100) fail("This game is full (100 players).");
+          if (g.players.size >= PLAYERS_PER_GAME)
+            fail(`This game is full (${PLAYERS_PER_GAME} players).`);
           const name = bounded(msg.name, 30, "nickname");
           const seat = [...g.players.values()].find(
             (p) => normalize(p.name) === normalize(name),
           );
           if (seat) {
-            // A room rescued on another site cannot carry a browser token
-            // across, so a returning player takes back their own seat by name
-            // while that seat is empty. A connected seat is never taken over.
-            if (!g.imported || seat.ws)
-              fail("That nickname is taken. Try another.");
+            // A player whose phone died, whose tab was swiped away, or who is on
+            // a room rescued from another site has no browser token left. They
+            // take back their own seat by name while that seat is empty. A seat
+            // that is still connected is never taken over, and the host is told
+            // whenever this happens so it can be seen.
+            if (seat.ws) fail("That nickname is taken. Try another.");
             seat.resumeToken = crypto.randomBytes(32).toString("hex");
             seat.ws = null;
             p = seat;
@@ -1408,6 +1537,7 @@ wss.on("connection", (ws, req) => {
             p = {
               id: crypto.randomUUID(),
               name,
+              avatar: pickAvatar(g),
               score: 0,
               answered: false,
               pending: 0,
@@ -1421,6 +1551,12 @@ wss.on("connection", (ws, req) => {
         ws.role = "player";
         ws.playerId = p.id;
         g.clients.add(ws);
+        if (reclaimed)
+          send(g.host, "seat_reclaimed", {
+            name: p.name,
+            score: p.score,
+            message: `${p.name} rejoined and took back their seat on ${p.score} points.`,
+          });
         sync(ws, g, "joined", {
           music: features.mediaURL(g.quiz.music),
           playerId: p.id,
@@ -1598,6 +1734,14 @@ wss.on("connection", (ws, req) => {
         if (q.type !== "text")
           for (const selected of q.type === "multi" ? answer : [answer])
             g.stats[selected] = (g.stats[selected] || 0) + 1;
+        // While the question is open the host — and only the host — sees the
+        // tally building up. Players and the projector get nothing until the
+        // answers are revealed, so nobody can read the room and copy.
+        send(g.host, "live_counts", {
+          stats: { ...g.stats },
+          answered: [...g.players.values()].filter((p) => p.answered).length,
+          total: g.players.size,
+        });
         send(ws, "answer_received", {
           accepted: true,
         });
@@ -1889,6 +2033,150 @@ async function importLiveGame(bundle, admin) {
   };
 }
 
+// Moving a saved quiz between accounts or between installations. The bundle is
+// self-contained: the quiz document plus every picture and sound it uses, so the
+// receiving account needs nothing from the sender's database or storage.
+const QUIZ_FILE = "quizzes-quiz-file";
+
+function mediaIdsOf(quiz) {
+  const ids = new Set();
+  if (quiz.music) ids.add(quiz.music.split("/").pop());
+  for (const round of quiz.rounds || [])
+    for (const q of round.questions || [])
+      if (q.media) ids.add(q.media.split("/").pop());
+  return ids;
+}
+
+async function buildQuizFile(quiz) {
+  const media = [];
+  let missing = 0;
+  for (const id of mediaIdsOf(quiz)) {
+    const row = await db.prepare("SELECT * FROM media WHERE id=?").get(id);
+    if (!row) {
+      missing++;
+      continue;
+    }
+    try {
+      const bytes = await mediaStore.read(id);
+      media.push({
+        id,
+        mime: row.mime,
+        name: row.name,
+        data: bytes.toString("base64"),
+      });
+    } catch {
+      missing++;
+    }
+  }
+  return {
+    kind: QUIZ_FILE,
+    version: 1,
+    created: Date.now(),
+    quiz,
+    media,
+    missing,
+  };
+}
+
+// The receiving account owns fresh copies of every picture and sound, exactly
+// as if they had uploaded them. Anything that fails to cross is reported rather
+// than silently dropped, and a question keeps working without its picture.
+async function adoptMedia(bundle, ownerId) {
+  const remapped = new Map();
+  const warnings = [];
+  const items = Array.isArray(bundle.media) ? bundle.media : [];
+  if (items.length > 400) fail("That file carries too many attachments.");
+  for (const item of items) {
+    const id = String((item && item.id) || "");
+    if (!/^[a-f0-9-]{8,64}$/.test(id)) continue;
+    let bytes;
+    try {
+      bytes = Buffer.from(String(item.data || ""), "base64");
+    } catch {
+      warnings.push("An attachment could not be read.");
+      continue;
+    }
+    if (!bytes.length || bytes.length > 25 * 1024 * 1024) {
+      warnings.push("An attachment was too large and was skipped.");
+      continue;
+    }
+    const mime = /^[a-z]+\/[a-z0-9.+-]+$/i.test(String(item.mime || ""))
+      ? String(item.mime)
+      : "application/octet-stream";
+    const fresh = crypto.randomUUID();
+    await mediaStore.write(fresh, bytes, mime);
+    await db.withTransaction(async (tx) => {
+      await tx
+        .prepare("INSERT INTO media (id,mime,name) VALUES (?,?,?)")
+        .run(fresh, mime, String(item.name || "media").slice(0, 120));
+      await tx
+        .prepare("INSERT INTO ownership (kind,item_id,owner_id) VALUES (?,?,?)")
+        .run("media", fresh, ownerId);
+    });
+    remapped.set(id, "/media/" + fresh);
+  }
+  return { remapped, warnings };
+}
+
+async function importQuizFile(bundle, admin) {
+  if (!bundle || bundle.kind !== QUIZ_FILE)
+    fail("That file is not a saved quiz.");
+  const source = bundle.quiz;
+  if (!source || !Array.isArray(source.rounds) || !source.rounds.length)
+    fail("The saved quiz has no questions.");
+  if (source.rounds.length > 20) fail("That quiz has more than 20 rounds.");
+
+  const { remapped, warnings } = await adoptMedia(bundle, admin.id);
+  const rewrite = (url) => {
+    if (!url) return "";
+    const fresh = remapped.get(String(url).split("/").pop());
+    if (!fresh) warnings.push("A question picture was not in the file.");
+    return fresh || "";
+  };
+
+  const quiz = await validateQuiz(
+    {
+      title: source.title,
+      description: source.description || "",
+      music: rewrite(source.music),
+      rounds: source.rounds.map((r) => ({
+        title: r.title || "",
+        questions: (r.questions || []).map((q) => {
+          const next = {
+            type: q.type,
+            text: q.text,
+            notes: q.notes || "",
+            seconds: q.seconds,
+            points: q.points,
+            media: rewrite(q.media),
+          };
+          if (q.accepted) next.accepted = q.accepted;
+          if (q.buzzPenalty !== undefined) next.buzzPenalty = q.buzzPenalty;
+          if (q.options) next.options = q.options;
+          if (q.correct !== undefined && q.type !== "multi") next.correct = q.correct;
+          if (q.correctAnswers) next.correctAnswers = q.correctAnswers;
+          return next;
+        }),
+      })),
+    },
+    admin.id,
+  );
+  await db.withTransaction(async (tx) => {
+    await tx
+      .prepare("INSERT INTO quizzes (id,document,updated) VALUES (?,?,?)")
+      .run(quiz.id, JSON.stringify(quiz), Date.now());
+    await tx
+      .prepare("INSERT INTO ownership (kind,item_id,owner_id) VALUES (?,?,?)")
+      .run("quizzes", quiz.id, admin.id);
+  });
+  return {
+    ok: true,
+    quiz,
+    media: remapped.size,
+    warnings: [...new Set(warnings)],
+  };
+}
+
 // A room is kept only as long as someone might come back to it. This adopts a
 // saved room into the running process without touching a single rule of play.
 function armRestoredRoom(g) {
@@ -1913,6 +2201,8 @@ function armRestoredRoom(g) {
 }
 function buildRoom(doc) {
   const g = live.restore(doc);
+  // A room saved before faces existed still comes back with one per player.
+  for (const p of g.players.values()) p.avatar = avatarFor(p);
   g.clients = new Set();
   g.imageTelemetry = new Map();
   g.host = null;

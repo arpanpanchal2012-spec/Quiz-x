@@ -3071,6 +3071,57 @@ textarea:focus-visible {
   flex: 1;
   min-width: 230px;
 }
+.limits-panel .limit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 22px 28px;
+  margin-top: 18px;
+}
+.limit-group h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #5b4b8a;
+}
+.limit-group dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+.limit-group dt {
+  font-weight: 600;
+}
+.limit-group dd {
+  margin: 0 0 6px;
+  color: #4a4360;
+}
+.limit-group dt,
+.limit-group dd {
+  font-size: 14px;
+  line-height: 1.45;
+}
+.running-room-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 18px 0;
+  padding: 16px 20px;
+  border: 1px solid #d8c9f5;
+  border-left: 5px solid #7c5cff;
+  border-radius: 14px;
+  background: #f6f2ff;
+}
+.running-room-strip[hidden] {
+  display: none;
+}
+.running-room-strip span {
+  font-size: 15px;
+  line-height: 1.5;
+}
 .publication-tools {
   display: flex;
   flex-wrap: wrap;
@@ -6469,4 +6520,407 @@ body.assigned-quiz {
   .assigned-quiz .independent-shell .answer-feedback {
     padding: 20px 18px;
   }
+}
+
+/* ===== rc.16 ==============================================================
+   Faces for players, a clock per round, drag-to-reorder in the editor, and the
+   answer distribution the room sees after every question.
+   ========================================================================= */
+
+.avatar-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  font-size: 16px;
+  line-height: 1;
+  background: #f0edff;
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.7);
+  user-select: none;
+}
+.avatar-badge.mint { background: #d9f6e8; }
+.avatar-badge.sun { background: #fdeec4; }
+.avatar-badge.sky { background: #dbeafe; }
+.avatar-badge.rose { background: #fde2e7; }
+.avatar-badge.lilac { background: #e9e3ff; }
+.avatar-badge.sand { background: #f6e8d8; }
+.avatar-badge.avatar-large {
+  width: 58px;
+  height: 58px;
+  font-size: 32px;
+  box-shadow: inset 0 0 0 3px rgb(255 255 255 / 0.8), 0 6px 18px rgb(30 20 60 / 0.12);
+}
+.avatar-badge.avatar-podium {
+  width: 54px;
+  height: 54px;
+  font-size: 30px;
+  margin: 0 auto 8px;
+}
+
+/* Who is in the room, before the first question. */
+.join-wall {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+  animation: wallIn 0.4s ease-out both;
+}
+.join-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #e4ddf2;
+  font-weight: 650;
+  font-size: 13px;
+  color: #2c2438;
+  max-width: 220px;
+}
+.join-chip span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.join-chip.is-away {
+  opacity: 0.55;
+}
+.join-wall.is-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 26px;
+  border: 2px dashed #ddd5ec;
+  border-radius: 16px;
+  color: #6a6178;
+  text-align: center;
+}
+.join-wall-face {
+  font-size: 34px;
+}
+@keyframes wallIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* The player's own face and name. */
+.player-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 16px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: #faf8ff;
+  border: 1px solid #ece6f8;
+}
+.player-identity b {
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+.player-identity[hidden] {
+  display: none;
+}
+
+/* The question lands, then the answers follow. */
+.answer-grid.reveal-answers .answer,
+.player-answers.reveal-answers .p-answer {
+  opacity: 0;
+  animation: answerIn 0.42s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+  animation-delay: calc(var(--reveal-delay, 1.5s) + var(--i, 0) * 110ms);
+}
+@keyframes answerIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .answer-grid.reveal-answers .answer,
+  .player-answers.reveal-answers .p-answer {
+    animation: none;
+    opacity: 1;
+  }
+  .join-wall {
+    animation: none;
+  }
+}
+
+/* How the room answered. */
+.answer.has-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.answer-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 0 100%;
+  margin-top: 4px;
+}
+.answer-bar i {
+  display: block;
+  height: 10px;
+  width: var(--share, 0%);
+  min-width: 2px;
+  max-width: calc(100% - 34px);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.9);
+  transition: width 0.6s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.answer-bar i.is-empty {
+  width: 0;
+  min-width: 0;
+}
+.answer-bar b {
+  font-size: 13px;
+  font-weight: 800;
+  color: currentColor;
+  min-width: 20px;
+}
+.p-answer .answer-bar i {
+  background: currentColor;
+  opacity: 0.45;
+}
+.p-answer .answer-bar b {
+  color: inherit;
+}
+.answer.has-bar.is-correct .answer-bar i {
+  background: #fff;
+  opacity: 1;
+}
+.answer-summary {
+  margin: 12px 0 0;
+  color: #6a6178;
+  font-size: 13px;
+  font-weight: 600;
+}
+.answer-summary[hidden] {
+  display: none;
+}
+
+/* Time for the whole round, decided once. */
+.round-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: #f6f3ff;
+  border: 1px solid #e6dff8;
+}
+.round-time-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: #6a5b93;
+  text-transform: uppercase;
+  line-height: 1.25;
+  max-width: 92px;
+}
+.round-time select {
+  width: auto;
+  min-width: 104px;
+  max-width: 100%;
+  margin: 0;
+  padding: 6px 8px;
+  font-size: 13px;
+  flex: 0 1 auto;
+}
+.round-time .text-btn {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.round-heading {
+  flex-wrap: wrap;
+}
+
+/* Drag a question to move it. */
+.thumb-grip {
+  position: absolute;
+  right: 7px;
+  bottom: 6px;
+  color: #b3a8c9;
+  font-size: 13px;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+.question-thumb {
+  cursor: grab;
+  touch-action: none;
+}
+.question-thumb.thumb-lifted {
+  opacity: 0.35;
+}
+.thumb-ghost {
+  position: fixed;
+  z-index: 90;
+  margin: 0;
+  opacity: 0.96;
+  pointer-events: none;
+  transform-origin: top left;
+  filter: drop-shadow(0 12px 24px rgb(38 25 66 / 0.28));
+  cursor: grabbing;
+}
+body.reordering {
+  cursor: grabbing;
+  user-select: none;
+}
+.thumb-drop-line {
+  position: fixed;
+  z-index: 91;
+  height: 3px;
+  border-radius: 3px;
+  background: #6c4bd8;
+  pointer-events: none;
+  box-shadow: 0 0 0 3px rgb(108 75 216 / 0.18);
+}
+
+/* Projector: the same reveal and the same distribution, read from the back. */
+.display-options.reveal-answers .display-option {
+  opacity: 0;
+  animation: answerIn 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+  animation-delay: calc(var(--reveal-delay, 1.2s) + var(--i, 0) * 130ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .display-options.reveal-answers .display-option {
+    animation: none;
+    opacity: 1;
+  }
+}
+.display-option {
+  flex-wrap: wrap;
+}
+.display-option .display-option-copy {
+  flex: 1 1 auto;
+  margin: 0;
+}
+.display-answer-bar {
+  flex: 1 0 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+.display-answer-bar i {
+  display: block;
+  height: 14px;
+  max-width: calc(100% - 60px);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.85);
+  transition: width 0.7s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.display-option.tile-2 .display-answer-bar i {
+  background: rgb(50 36 0 / 0.55);
+}
+.display-answer-bar b {
+  font-size: calc(var(--display-answer, 30px) * 0.62);
+  font-weight: 800;
+  min-width: 46px;
+}
+.display-standings li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.display-standings .avatar-badge {
+  width: 40px;
+  height: 40px;
+  font-size: 22px;
+}
+.display-answer-bar i.is-empty {
+  height: 14px;
+  width: 0;
+}
+.player-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 46%;
+  font-size: 13px;
+  color: #3b2c53;
+}
+.player-chip[hidden] {
+  display: none;
+}
+.player-chip b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+}
+.player-chip .avatar-badge {
+  width: 26px;
+  height: 26px;
+  font-size: 15px;
+}
+.player-meta {
+  align-items: center;
+}
+/* A phone has no room for a name and a clock on one line. */
+@media (max-width: 720px) {
+  .round-heading {
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .round-heading label {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .round-time {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .round-time-label {
+    max-width: none;
+    flex: 1 1 100%;
+  }
+  .round-time select {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .round-time .text-btn {
+    flex: 0 1 auto;
+    white-space: normal;
+    text-align: left;
+    line-height: 1.25;
+  }
+  .round-heading input,
+  .round-title {
+    max-width: 100%;
+  }
+}
+/* A quiet running tally, host screen only, while a question is open. */
+.live-tally {
+  margin-left: auto;
+  min-width: 22px;
+  text-align: right;
+  font-size: 15px;
+  font-weight: 800;
+  opacity: 0.92;
+}
+.live-tally.is-zero {
+  opacity: 0.4;
+}
+.answer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }

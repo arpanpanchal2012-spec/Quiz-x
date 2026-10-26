@@ -29,6 +29,18 @@
     stopped = false,
     pingAt = 0;
   const symbols = ["▲", "◆", "●", "■", "⬟", "★"];
+  const AVATAR_TINTS = ["mint", "sun", "sky", "rose", "lilac", "sand"];
+  const tint = (value) => {
+    let hash = 0;
+    for (const c of String(value || ""))
+      hash = (hash * 31 + c.codePointAt(0)) % 997;
+    return AVATAR_TINTS[hash % AVATAR_TINTS.length];
+  };
+  const face = (p) =>
+    `<span class="avatar-badge ${tint(p.avatar)}" aria-hidden="true">${escape(p.avatar || "🙂")}</span>`;
+  // The stage is rebuilt on every message. Only the first render of a question
+  // plays the "question, then answers" reveal; later updates must not replay it.
+  let revealKey = "";
   function fit() {
     const root = $("#displayStage");
     root.style.setProperty(
@@ -51,7 +63,7 @@
     // Content stays scrollable instead of clipping at high zoom or extreme length.
   }
   function ranking() {
-    return `<div class="display-standings"><div class="eyebrow">${game.status === "ended" ? "FINAL RESULTS" : "LIVE STANDINGS"}</div><h1>${game.status === "ended" ? "Celebrate your winners" : "Leaderboard"}</h1>${rows.length ? `<ol>${rows.map((p) => `<li><b>${Number(p.rank)}</b><span>${escape(p.name)}</span><strong>${Number(p.score).toLocaleString()} <small>pts</small></strong></li>`).join("")}</ol>` : "<p>No participants yet.</p>"}</div>`;
+    return `<div class="display-standings"><div class="eyebrow">${game.status === "ended" ? "FINAL RESULTS" : "LIVE STANDINGS"}</div><h1>${game.status === "ended" ? "Celebrate your winners" : "Leaderboard"}</h1>${rows.length ? `<ol>${rows.map((p) => `<li><b>${Number(p.rank)}</b>${face(p)}<span>${escape(p.name)}</span><strong>${Number(p.score).toLocaleString()} <small>pts</small></strong></li>`).join("")}</ol>` : "<p>No participants yet.</p>"}</div>`;
   }
   function render() {
     if (!game) return;
@@ -80,7 +92,18 @@
       stage.innerHTML = `<section class="display-question display-buzzer"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer">BUZZ</b></div><h1>${escape(question.text)}</h1><p class="display-instruction">${buzzOpen ? "Listen, then press BUZZ on your phone." : "Buzzing is closed."}</p><div class="display-buzzes">${queue.length ? `<ol>${queue.slice(0, 8).map((b) => `<li class="buzz-row buzz-${escape(b.status)}"><b class="buzz-pos">${b.position}</b><span class="buzz-name">${escape(b.name)}</span><span class="buzz-time">${(b.elapsedMs / 1000).toFixed(1)}s</span>${b.points ? `<span class="buzz-points">${b.points > 0 ? "+" : "−"}${Math.abs(b.points).toLocaleString()}</span>` : ""}</li>`).join("")}</ol>` : '<p class="muted">No one has buzzed in yet.</p>'}</div></section>`;
       tick();
     } else if (question) {
-      stage.innerHTML = `<section class="display-question"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer"></b></div><h1>${escape(question.text)}</h1><div class="display-media">${question.media && question.mediaType?.startsWith("image/") ? `<img loading="eager" fetchpriority="high" decoding="async" src="${escape(question.media)}" alt="Question image">` : question.media ? "<p>Audio question · Listen to the host.</p>" : ""}</div><div class="display-options">${(question.options || []).map((o, i) => `<div class="display-option tile-${i} ${game.status === "results" && result?.correctIndices?.includes(i) ? "display-correct" : ""}"><span aria-hidden="true">${symbols[i]}</span><span>${escape(o)}</span></div>`).join("")}</div><p class="display-instruction">${game.status === "results" ? "Correct answer: " + escape(result?.correct || "") : question.type === "multi" ? "Select all correct answers, then submit on your device." : question.type === "text" ? "Type your answer on your device." : "Choose your answer on your device."}</p></section>`;
+      const key = `${game.status}:${question.index}:${question.id}`;
+      const fresh = key !== revealKey;
+      revealKey = key;
+      stage.innerHTML = `<section class="display-question"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer"></b></div><h1>${escape(question.text)}</h1><div class="display-media">${question.media && question.mediaType?.startsWith("image/") ? `<img loading="eager" fetchpriority="high" decoding="async" src="${escape(question.media)}" alt="Question image">` : question.media ? "<p>Audio question · Listen to the host.</p>" : ""}</div><div class="display-options${fresh ? " reveal-answers" : ""}" style="--reveal-delay:${fresh ? "1.2s" : "0s"}">${(question.options || []).map((o, i) => {
+        const count = Number(result?.stats?.[i]) || 0;
+        const votes = Object.values(result?.stats || {}).reduce(
+          (sum, n) => sum + (Number(n) || 0),
+          0,
+        );
+        const share = votes ? Math.round((count / votes) * 100) : 0;
+        return `<div class="display-option tile-${i} ${game.status === "results" && result?.correctIndices?.includes(i) ? "display-correct" : ""}" style="--i:${i}"><span aria-hidden="true">${symbols[i]}</span><span class="display-option-copy">${escape(o)}</span>${game.status === "results" ? `<span class="display-answer-bar"><i style="width:${share}%"${count ? "" : ' class="is-empty"'}></i><b>${count}</b></span>` : ""}</div>`;
+      }).join("")}</div><p class="display-instruction">${game.status === "results" ? "Correct answer: " + escape(result?.correct || "") : question.type === "multi" ? "Select all correct answers, then submit on your device." : question.type === "text" ? "Type your answer on your device." : "Choose your answer on your device."}</p></section>`;
       $(".display-media img")?.addEventListener("load", fit, { once: true });
       tick();
     }
