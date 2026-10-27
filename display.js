@@ -86,10 +86,11 @@
         rank === 1
           ? '<span class="display-podium-crown" aria-hidden="true"><svg viewBox="0 0 48 32" width="40" height="26"><path d="M4 30 2 8l12 8 10-14 10 14 12-8-2 22z" fill="#f6c542" stroke="#b8860b" stroke-width="2" stroke-linejoin="round"/></svg></span>'
           : "";
+      const mood = rank === 1 ? " react-win" : rank ? " react-clap" : "";
       const figure = self
-        ? `<span class="display-podium-figure">${crown}<img class="kchar kchar-self" src="/live-avatar/${encodeURIComponent(game?.code || "")}/${encodeURIComponent(String(p.character).slice(5))}.webp?r=${Number(p.faceRev) || 0}" alt="" /></span>`
+        ? `<span class="display-podium-figure${mood}">${crown}<img class="kchar kchar-self" src="/live-avatar/${encodeURIComponent(game?.code || "")}/${encodeURIComponent(String(p.character).slice(5))}.webp?r=${Number(p.faceRev) || 0}" alt="" /></span>`
         : window.QuizzesCharacters && p.character
-          ? `<span class="display-podium-figure">${crown}${window.QuizzesCharacters.render(p.character, p.accessory)}</span>`
+          ? `<span class="display-podium-figure${mood}">${crown}${window.QuizzesCharacters.render(p.character, p.accessory)}</span>`
           : "";
       return `<div class="display-podium-place place-${rank}">${figure}<div class="display-podium-block"><span class="display-podium-badge">${rank}</span><b>${escape(p.name)}</b><span class="display-podium-score">${Number(p.score).toLocaleString()}</span></div></div>`;
     };
@@ -156,7 +157,22 @@
         <div class="projector-room-centre"><div class="eyebrow">READY WHEN YOU ARE</div><h1>${escape(game.title)}</h1><p class="projector-room-count"><b>${seated.length}</b> ${seated.length === 1 ? "player" : "players"} in the room</p></div>
         <div class="projector-people"><div class="eyebrow">PARTICIPANTS <b>${seated.length}</b></div>${
           seated.length
-            ? `<ul>${seated.map((p) => `<li class="${p.connected ? "" : "is-away"}"><span>${escape(p.name)}</span></li>`).join("")}</ul>`
+            ? `<ul>${seated
+                .map((p) => {
+                  const self =
+                    typeof p.character === "string" &&
+                    p.character.startsWith("self:");
+                  const figure = self
+                    ? `<img class="kchar kchar-self" src="/live-avatar/${encodeURIComponent(game.code)}/${encodeURIComponent(String(p.character).slice(5))}.webp?r=${Number(p.faceRev) || 0}" alt="" />`
+                    : window.QuizzesCharacters
+                      ? window.QuizzesCharacters.render(p.character, p.accessory, {
+                          label: false,
+                          thumb: true,
+                        })
+                      : "";
+                  return `<li class="${p.connected ? "" : "is-away"}"><span class="projector-figure">${figure}</span><span>${escape(p.name)}</span></li>`;
+                })
+                .join("")}</ul>`
             : '<p class="muted">Waiting for the first player.</p>'
         }</div>
       </section>`;

@@ -514,12 +514,15 @@ function figureHTML(player, options = {}) {
   if (!KCHARS) return "";
   if (isSelfLook(player?.character))
     return `<img class="kchar kchar-self" src="${selfLookSrc(player)}" alt="${options.label === false ? "" : "Your character"}" width="240" height="400" decoding="async" draggable="false" />`;
-  return KCHARS.render(player?.character, player?.accessory, { thumb: !!options.thumb });
+  return KCHARS.render(player?.character, player?.accessory, {
+    thumb: !!options.thumb,
+    label: options.label !== false,
+  });
 }
 function characterSVG(player, className = "", options = {}) {
   if (!KCHARS) return "";
   const photo = isPhotoLook(player?.character) ? " is-photo" : "";
-  return `<span class="kchar-holder ${className}${photo}">${figureHTML(player, options)}</span>`;
+  return `<span class="kchar-holder ${className}${photo}">${figureHTML(player, { ...options, label: options.label !== false })}</span>`;
 }
 // The room can forget a face (a restart, or the player changing it). The slot
 // then shows that player's drawn character rather than a broken image.
@@ -1674,8 +1677,16 @@ function handleMessage(m) {
     return;
   }
   if (m.type === "buzz_queue") {
+    const before =
+      (buzzes || []).find((b) => b.playerId === myPlayerId)?.status || "";
     buzzes = m.buzzes || [];
     buzzOpen = m.open !== false;
+    const mineNow = buzzes.find((b) => b.playerId === myPlayerId);
+    // The host's verdict on this player's buzz, said with the body.
+    if (mineNow && mineNow.status !== before) {
+      if (mineNow.status === "correct") react("accept", 1200, myFigureHolders().concat($$(".podium-figure")));
+      if (mineNow.status === "wrong") react("reject", 1400);
+    }
     if (game?.status === "buzzer") renderBuzzQueue();
     return;
   }
@@ -1689,6 +1700,7 @@ function handleMessage(m) {
     const note = $("#buzzNote");
     if (note)
       note.textContent = `You buzzed in at #${m.position}. Listen for your name.`;
+    react("buzz", 900);
     if ($("#answerStatus"))
       $("#answerStatus").textContent = `Buzzed in #${m.position} · waiting for the host.`;
     return;
@@ -2070,6 +2082,56 @@ function lockAnswers() {
     "#playerOptions button, #textAnswerForm input, #textAnswerForm button",
   ).forEach((b) => (b.disabled = disabled));
 }
+// ---- reactions -------------------------------------------------------------
+// One class on the player's own figure is all a reaction needs: the vocabulary
+// (jump, droop, spin, clap, pump…) lives in characters.css, and it already knows
+// the difference between a drawn figure with arms and a flat picture.
+const REACTIONS = [
+  "react-correct", "react-wrong", "react-win", "react-clap", "react-streak",
+  "react-lead", "react-rush", "react-wave", "react-buzz", "react-accept",
+  "react-reject",
+];
+function myFigureHolders() {
+  return [
+    ...$$("#playerAvatar .kchar-holder"),
+    ...$$("#playerChip .kchar-holder"),
+  ];
+}
+let reactionTimer = 0;
+// A reaction survives the card being redrawn: the phone rebuilds its figure on
+// every roster update, and the class has to go back on the new element.
+let activeReaction = null;
+function react(name, ms = 1700, holders) {
+  const nodes = holders || myFigureHolders();
+  activeReaction = name ? { name, until: Date.now() + ms } : null;
+  for (const node of nodes) {
+    node.classList.remove(...REACTIONS);
+    if (name) node.classList.add("react-" + name);
+  }
+  clearTimeout(reactionTimer);
+  if (name && ms)
+    reactionTimer = setTimeout(() => {
+      if (activeReaction?.name === name) activeReaction = null;
+      nodes.forEach((n) => n.classList.remove("react-" + name));
+    }, ms);
+}
+// Called right after the figure is redrawn.
+function replayReaction() {
+  if (!activeReaction) return;
+  if (Date.now() > activeReaction.until) {
+    activeReaction = null;
+    return;
+  }
+  for (const node of myFigureHolders())
+    if (!node.classList.contains("react-" + activeReaction.name))
+      node.classList.add("react-" + activeReaction.name);
+}
+// A wave now and then while the room fills, so the lobby is never a still photo.
+setInterval(() => {
+  if (game?.status !== "lobby" || !participantMode) return;
+  react("wave", 2700);
+}, 9000);
+
 // What the player actually sent, so the reveal can react to it. The right
 // answer only exists on the client once the reveal arrives.
 let lastAnswer = null;
@@ -2079,6 +2141,10 @@ function resetFeedback() {
   lastAnswer = null;
   lastScore = 0;
   streak = 0;
+  lastRank = 0;
+  react(null, 0);
+  const chip = myFigureHolders();
+  for (const node of chip) node.classList.remove("react-rush");
   const pill = $("#playerStreak");
   if (pill) pill.hidden = true;
   const float = $("#pointsFloat");
@@ -2125,8 +2191,23 @@ function revealFeedback(result) {
     if (lastAnswer !== null && lastAnswer !== undefined)
       stage.classList.add(right ? "is-right" : "is-wrong");
   }
+  // The figure answers back: a leap for a right answer, a droop and a head
+  // shake for a wrong one, a fist pump once the run is worth celebrating, and
+  // a jump-and-point the moment this player takes first place.
+  const rank = Number(mine?.rank) || 0;
+  const tookLead = rank === 1 && lastRank !== 1 && Number(mine?.score) > 0;
+  lastRank = rank;
+  if (right) {
+    react("correct", 1500);
+    if (streak >= 3)
+      setTimeout(() => react("streak", 1400), 1150);
+    if (tookLead) setTimeout(() => react("lead", 1300), 2300);
+  } else if (lastAnswer !== null && lastAnswer !== undefined) {
+    react("wrong", 1800);
+  }
   if (right) window.QuizzesCelebrate?.from($("#playerTitle"), 70);
 }
+let lastRank = 0;
 function submitAnswer(answer, button) {
   if (locked || game?.status !== "question" || game?.optionsVisible === false)
     return;
@@ -2372,7 +2453,7 @@ function renderJoinWall() {
     ? `<div class="join-wall" aria-label="${seated.length} players ready">${seated
         .map(
           (p) =>
-            `<div class="join-chip${p.connected ? "" : " is-away"}${fresh.has(p.id) ? " just-joined" : ""}"><span>${e(p.name)}</span></div>`,
+            `<div class="join-chip${p.connected ? "" : " is-away"}${fresh.has(p.id) ? " just-joined" : ""}"><span class="join-figure">${characterSVG(p, "is-figure react-wave", { thumb: true, label: false })}</span><span>${e(p.name)}</span></div>`,
         )
         .join("")}</div>${game.participants.length > 60 ? `<p class="muted">and ${game.participants.length - 60} more</p>` : ""}`
     : `<div class="join-wall is-empty"><span class="join-wall-face" aria-hidden="true">🎟️</span><p>Waiting for the first player. Share the join link or the code above.</p></div>`;
@@ -2397,6 +2478,7 @@ function renderIdentity() {
   $("#playerName").textContent = me.name;
   chip.className = "player-chip";
   chip.innerHTML = `${characterChip(me)}<b>${e(me.name)}</b>`;
+  replayReaction();
 }
 setInterval(() => {
   if (!game) return;
@@ -2407,7 +2489,13 @@ setInterval(() => {
     : 0;
   sound.remaining(remaining);
   const timer = $(participantMode ? "#playerTimer" : "#hostTimer");
-  timer.classList.toggle("timer-urgent", counting && remaining <= 5);
+  const urgent = counting && remaining <= 5;
+  timer.classList.toggle("timer-urgent", urgent);
+  // In the last five seconds the player's own figure leans in and bounces.
+  if (participantMode) {
+    for (const node of myFigureHolders())
+      node.classList.toggle("react-rush", urgent && !locked);
+  }
   // The pill carries a ring that drains with the clock, so how much time is left
   // is legible from across a room, not just as a number.
   const total = Number(liveQuestion?.seconds) || 0;
@@ -3157,8 +3245,10 @@ function podiumPlace(p) {
     rank === 1
       ? '<span class="podium-crown" aria-hidden="true"><svg viewBox="0 0 48 32" width="34" height="22"><path d="M4 30 2 8l12 8 10-14 10 14 12-8-2 22z" fill="#f6c542" stroke="#b8860b" stroke-width="2" stroke-linejoin="round"/></svg></span>'
       : "";
+  // First place throws its arms up and spins; the runners-up applaud.
+  const mood = rank === 1 ? " react-win" : rank ? " react-clap" : "";
   const figure = KCHARS
-    ? `<span class="podium-figure">${crown}${figureHTML(p)}</span>`
+    ? `<span class="podium-figure${mood}">${crown}${figureHTML(p)}</span>`
     : "";
   return `<div class="podium-place place-${rank}">
       ${figure}

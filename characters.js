@@ -133,13 +133,22 @@
 
   // ------------------------------------------------------------------ eyes
   // The wet highlight in the eye does more for depth than any gradient.
+  // The pair of eyes. Each is wrapped so it can close as a whole (a real
+  // blink, not a squashed highlight), carries a brow that can lift or furrow,
+  // and has a lid line that draws itself as the eye shuts.
   function eyes(id, y = 50, dx = 18, r = 13.5) {
     const one = (x, n) => `
-      <ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r * 0.98}" fill="url(#${id}-sclera)"/>
-      <ellipse cx="${x}" cy="${y + r * 0.1}" rx="${r * 0.6}" ry="${r * 0.62}" fill="#2b2040"/>
-      <ellipse cx="${x}" cy="${y + r * 0.16}" rx="${r * 0.4}" ry="${r * 0.42}" fill="#120c1c"/>
-      <circle class="kpupil kpupil-${n}" cx="${x - r * 0.22}" cy="${y - r * 0.24}" r="${r * 0.26}" fill="#fff" opacity=".95"/>
-      <circle cx="${x + r * 0.2}" cy="${y + r * 0.3}" r="${r * 0.11}" fill="#fff" opacity=".6"/>`;
+      <g class="keye keye-${n}">
+        <ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r * 0.98}" fill="url(#${id}-sclera)"/>
+        <g class="keyeball">
+          <ellipse cx="${x}" cy="${y + r * 0.1}" rx="${r * 0.6}" ry="${r * 0.62}" fill="#2b2040"/>
+          <ellipse cx="${x}" cy="${y + r * 0.16}" rx="${r * 0.4}" ry="${r * 0.42}" fill="#120c1c"/>
+          <circle class="kpupil kpupil-${n}" cx="${x - r * 0.22}" cy="${y - r * 0.24}" r="${r * 0.26}" fill="#fff" opacity=".95"/>
+          <circle cx="${x + r * 0.2}" cy="${y + r * 0.3}" r="${r * 0.11}" fill="#fff" opacity=".6"/>
+        </g>
+      </g>
+      <path class="klid klid-${n}" d="M${x - r * 1.02} ${y} q${r * 1.02} ${r * 0.55} ${r * 2.04} 0" fill="none" stroke="${INK}" stroke-width="2.4" stroke-linecap="round" opacity="0"/>
+      <path class="kbrow kbrow-${n}" d="M${x - r * 0.85} ${y - r * 1.55} q${r * 0.85} ${-r * 0.42} ${r * 1.7} 0" fill="none" stroke="${INK}" stroke-width="2.6" stroke-linecap="round" opacity=".55"/>`;
     return one(60 - dx, "a") + one(60 + dx, "b");
   }
   const blush = (id, y) => `
@@ -426,7 +435,11 @@
     // hat starts at y = -30) and stops below the chin, so an accessory tile
     // shows the hat rather than the whole figure.
     const box = options.head ? "-10 -38 140 118" : "0 0 120 200";
-    return `<svg class="kchar${options.head ? " is-head" : ""}" viewBox="${box}" role="img" aria-label="${c.label} character" ${options.extra || ""} xmlns="http://www.w3.org/2000/svg">
+    // Every figure blinks on its own slow rhythm, so a crowd never blinks in
+    // unison; the delays and the cycle are decided once, per instance.
+    const blink = `${(2 + Math.random() * 4.5).toFixed(2)}s`;
+    const cycle = `${(6.5 + Math.random() * 4).toFixed(2)}s`;
+    return `<svg class="kchar${options.head ? " is-head" : ""}" style="--blink:${blink};--blinkCycle:${cycle}" viewBox="${box}" role="img" aria-label="${c.label} character" ${options.extra || ""} xmlns="http://www.w3.org/2000/svg">
       ${title}
       <defs>${defsFor(id, c)}</defs>
       ${body(c, id)}

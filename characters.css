@@ -186,3 +186,383 @@
     animation: none;
   }
 }
+
+/* ===== rc.23 — a character that reacts ====================================
+   One vocabulary, three bodies. A drawn figure can move its own parts (eyes,
+   brows, arms, feet, head). A picture or a self portrait cannot: it is one flat
+   image, so it gets the whole-body version — hop, squash, spin, tilt — and the
+   same overlay on its holder. Both are driven by a class on the .kchar-holder,
+   so every screen only has to say what happened.
+   ====================================================================== */
+
+/* --- eyes --------------------------------------------------------------- */
+/* The whole eye closes, and a lid line draws itself across it. */
+.kchar .keye {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: kBlinkNow var(--blinkCycle, 7s) linear infinite;
+  animation-delay: var(--blink, 0s);
+}
+.kchar .klid {
+  animation: kLidNow var(--blinkCycle, 7s) linear infinite;
+  animation-delay: var(--blink, 0s);
+}
+.kchar .kbrow {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+@keyframes kBlinkNow {
+  0%, 96.4% { transform: scaleY(1); }
+  97.2% { transform: scaleY(0.12); }
+  98% { transform: scaleY(1); }
+  98.8% { transform: scaleY(0.12); }
+  99.6%, 100% { transform: scaleY(1); }
+}
+@keyframes kLidNow {
+  0%, 96.4% { opacity: 0; }
+  97.2% { opacity: 0.8; }
+  98% { opacity: 0; }
+  98.8% { opacity: 0.8; }
+  99.6%, 100% { opacity: 0; }
+}
+/* A wink: one eye, once in a while, on a slow timer of its own. */
+.kchar .keye-b {
+  animation:
+    kBlinkNow var(--blinkCycle, 7s) linear infinite var(--blink, 0s),
+    kWink 17s ease-in-out infinite;
+}
+
+/* --- what a reaction does to a drawn figure ----------------------------- */
+/* Correct: a crouch, a leap, arms up, brows lifted, eyes wide and happy. */
+.kchar-holder.react-correct .kchar {
+  animation: kJump 0.95s cubic-bezier(0.3, 0.9, 0.4, 1) both;
+}
+.kchar-holder.react-correct .kchar .karm-l {
+  animation: kArmUpL 0.95s cubic-bezier(0.3, 0.9, 0.4, 1) both;
+}
+.kchar-holder.react-correct .kchar .karm-r {
+  animation: kArmUpR 0.95s cubic-bezier(0.3, 0.9, 0.4, 1) both;
+}
+.kchar-holder.react-correct .kchar .kbrow {
+  transform: translateY(-2px) scaleY(0.7);
+  opacity: 0.35;
+}
+.kchar-holder.react-correct .kchar .keye {
+  animation: kSqueeze 0.9s ease-out both;
+}
+
+/* Wrong: the shoulders fall, the head drops and shakes twice, brows furrow. */
+.kchar-holder.react-wrong .kchar {
+  animation: kDroop 1.5s cubic-bezier(0.4, 0, 0.3, 1) both;
+}
+.kchar-holder.react-wrong .kchar .khead {
+  animation: kNoShake 1.2s ease-in-out 0.25s both;
+}
+.kchar-holder.react-wrong .kchar .karm-l {
+  animation: kArmDroop 1.2s ease-out both;
+}
+.kchar-holder.react-wrong .kchar .karm-r {
+  animation: kArmDroop 1.2s ease-out both reverse;
+}
+.kchar-holder.react-wrong .kchar .kbrow {
+  transform: translateY(1.5px) rotate(12deg);
+  opacity: 0.9;
+}
+.kchar-holder.react-wrong .kchar .kbrow-b {
+  transform: translateY(1.5px) rotate(-12deg);
+}
+
+/* Win: crown already falls; the figure spins once, then waves. */
+.kchar-holder.react-win .kchar,
+.podium-figure.react-win .kchar,
+.display-podium-figure.react-win .kchar {
+  animation: kWinSpin 1.6s cubic-bezier(0.3, 0.8, 0.3, 1) 0.35s both;
+}
+.kchar-holder.react-win .kchar .karm-r,
+.podium-figure.react-win .kchar .karm-r {
+  animation: kWave 0.9s ease-in-out 1.4s 4 both;
+  transform-origin: 50% 4%;
+}
+
+/* Second and third: a polite clap — the arms meet in the middle, three times. */
+.kchar-holder.react-clap .kchar .karm-l,
+.podium-figure.react-clap .kchar .karm-l {
+  animation: kClapL 0.42s ease-in-out 0.6s 6 both;
+}
+.kchar-holder.react-clap .kchar .karm-r,
+.podium-figure.react-clap .kchar .karm-r {
+  animation: kClapR 0.42s ease-in-out 0.6s 6 both;
+}
+
+/* A run of right answers: a quick fist pump, twice. */
+.kchar-holder.react-streak .kchar {
+  animation: kPump 0.55s ease-in-out 2 both;
+}
+.kchar-holder.react-streak .kchar .karm-r {
+  animation: kFist 0.55s ease-in-out 2 both;
+}
+
+/* Taking the lead: a jump and a point at the ceiling. */
+.kchar-holder.react-lead .kchar {
+  animation: kLeadHop 1.1s cubic-bezier(0.3, 0.9, 0.4, 1) both;
+}
+.kchar-holder.react-lead .kchar .karm-r {
+  animation: kPointUp 1.1s cubic-bezier(0.3, 0.9, 0.4, 1) both;
+}
+
+/* Last five seconds: the figure leans in and bounces faster. */
+.kchar-holder.react-rush .kchar {
+  animation: kRush 0.42s ease-in-out infinite;
+}
+
+/* Waiting in the lobby: an occasional wave, so the crowd is alive. */
+.kchar-holder.react-wave .kchar .karm-r {
+  animation: kWave 0.9s ease-in-out 0s 3 both;
+}
+
+/* Buzzer: up on the buzz, cheer if taken, head-shake and drop if not. */
+.kchar-holder.react-buzz .kchar {
+  animation: kJump 0.7s cubic-bezier(0.3, 0.9, 0.4, 1) both;
+}
+.kchar-holder.react-buzz .kchar .karm-l,
+.kchar-holder.react-buzz .kchar .karm-r {
+  animation: kArmUpL 0.7s cubic-bezier(0.3, 0.9, 0.4, 1) both;
+}
+.kchar-holder.react-accept .kchar {
+  animation: kJump 0.8s cubic-bezier(0.3, 0.9, 0.4, 1) 2 both;
+}
+.kchar-holder.react-reject .kchar .khead {
+  animation: kNoShake 1s ease-in-out both;
+}
+
+@keyframes kJump {
+  0% { transform: translateY(0) scale(1, 1); }
+  14% { transform: translateY(0) scale(1.08, 0.9); }
+  44% { transform: translateY(-26%) scale(0.94, 1.07); }
+  62% { transform: translateY(0) scale(1.05, 0.94); }
+  76% { transform: translateY(-6%) scale(0.99, 1.02); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+@keyframes kArmUpL {
+  0% { transform: rotate(0); }
+  40% { transform: rotate(-118deg); }
+  70% { transform: rotate(-104deg); }
+  100% { transform: rotate(0); }
+}
+@keyframes kArmUpR {
+  0% { transform: rotate(0); }
+  40% { transform: rotate(118deg); }
+  70% { transform: rotate(104deg); }
+  100% { transform: rotate(0); }
+}
+@keyframes kSqueeze {
+  0%, 100% { transform: scaleY(1); }
+  30% { transform: scaleY(0.15); }
+  55% { transform: scaleY(1.08); }
+}
+@keyframes kDroop {
+  0% { transform: translateY(0) rotate(0); }
+  35% { transform: translateY(3%) rotate(-1.5deg) scale(0.97, 0.98); }
+  70% { transform: translateY(2%) rotate(0.8deg) scale(0.98, 0.99); }
+  100% { transform: translateY(0) rotate(0) scale(1, 1); }
+}
+@keyframes kNoShake {
+  0%, 100% { transform: rotate(0); }
+  18% { transform: rotate(-7deg) translateY(2px); }
+  40% { transform: rotate(6deg) translateY(2px); }
+  62% { transform: rotate(-4deg); }
+  82% { transform: rotate(2deg); }
+}
+@keyframes kArmDroop {
+  0% { transform: rotate(0); }
+  40%, 100% { transform: rotate(-8deg) translateY(4%); }
+}
+@keyframes kWinSpin {
+  0% { transform: rotate(0) scale(1); }
+  22% { transform: rotate(-12deg) scale(1.05, 0.95); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+@keyframes kWave {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(28deg); }
+  50% { transform: rotate(-6deg); }
+  75% { transform: rotate(26deg); }
+}
+@keyframes kClapL {
+  0%, 100% { transform: rotate(0); }
+  50% { transform: rotate(26deg) translateX(6px); }
+}
+@keyframes kClapR {
+  0%, 100% { transform: rotate(0); }
+  50% { transform: rotate(-26deg) translateX(-6px); }
+}
+@keyframes kPump {
+  0%, 100% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-8%) scale(1.02, 0.98); }
+}
+@keyframes kFist {
+  0%, 100% { transform: rotate(0); }
+  45% { transform: rotate(-92deg); }
+}
+@keyframes kLeadHop {
+  0%, 100% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-24%) scale(0.96, 1.05); }
+  55% { transform: translateY(0) scale(1.04, 0.96); }
+}
+@keyframes kPointUp {
+  0%, 100% { transform: rotate(0); }
+  35%, 70% { transform: rotate(-150deg); }
+}
+@keyframes kRush {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-4px) scale(1.01, 0.99); }
+}
+@keyframes kWink {
+  0%, 88%, 94%, 100% { transform: scaleY(1); }
+  90%, 92% { transform: scaleY(0.1); }
+}
+
+/* --- what a reaction does to a picture or a self portrait --------------- */
+/* No arms, no eyelids: the whole figure moves, and the holder carries the
+   sparkles, the sweat and the glow. */
+.kchar-holder.is-photo.react-correct .kchar,
+.kchar-holder.is-self.react-correct .kchar {
+  animation: kPhotoHappy 1s cubic-bezier(0.3, 0.9, 0.4, 1) 3 both;
+}
+.kchar-holder.is-photo.react-wrong .kchar,
+.kchar-holder.is-self.react-wrong .kchar {
+  animation: kPhotoSad 1.6s ease-out both;
+}
+.kchar-holder.is-photo.react-win .kchar,
+.kchar-holder.is-self.react-win .kchar,
+.podium-figure.react-win img.kchar {
+  animation: kPhotoSpin 1.5s cubic-bezier(0.3, 0.8, 0.3, 1) 0.35s both;
+}
+.kchar-holder.is-photo.react-clap .kchar,
+.kchar-holder.is-self.react-clap .kchar,
+.podium-figure.react-clap img.kchar {
+  animation: kPhotoClap 1.2s ease-in-out infinite;
+}
+.kchar-holder.is-photo.react-streak .kchar,
+.kchar-holder.is-self.react-streak .kchar {
+  animation: kPhotoHappy 0.5s cubic-bezier(0.3, 0.9, 0.4, 1) 4 both;
+}
+.kchar-holder.is-photo.react-rush .kchar,
+.kchar-holder.is-self.react-rush .kchar {
+  animation: kPhotoRush 0.5s ease-in-out infinite;
+}
+.kchar-holder.is-photo.react-wave .kchar,
+.kchar-holder.is-self.react-wave .kchar {
+  animation: kPhotoWave 3.2s ease-in-out infinite;
+}
+@keyframes kPhotoHappy {
+  0%, 100% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-12%) scale(0.95, 1.06); }
+  65% { transform: translateY(0) scale(1.05, 0.95); }
+}
+@keyframes kPhotoSad {
+  0% { transform: translateY(0) rotate(0) scale(1); }
+  30% { transform: translateY(3%) rotate(-3deg) scale(0.94); }
+  60% { transform: translateY(2%) rotate(2deg) scale(0.95); }
+  100% { transform: translateY(0) rotate(0) scale(1); }
+}
+@keyframes kPhotoSpin {
+  0% { transform: rotate(0) scale(1); }
+  20% { transform: rotate(-10deg) scale(1.06, 0.94); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+@keyframes kPhotoClap {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-4%) scale(1.02, 0.98); }
+}
+@keyframes kPhotoRush {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+@keyframes kPhotoWave {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(3deg); }
+}
+
+/* --- the overlays: on the holder, so they work for every body ----------- */
+.kchar-holder { position: relative; }
+.kchar-holder::before,
+.kchar-holder::after {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+}
+/* Sparkles for a right answer. */
+.kchar-holder.react-correct::after {
+  content: "✦ ✧ ✦";
+  right: -8px;
+  top: -6px;
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: #ffd447;
+  text-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+  animation: kSparkle 1.3s ease-out both;
+}
+.kchar-holder.react-correct::before {
+  content: "";
+  inset: auto 0 -6% 0;
+  height: 18%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(62 203 149 / 0.55), transparent);
+  animation: kGlow 1.3s ease-out both;
+}
+/* A sweat drop for a wrong answer. */
+.kchar-holder.react-wrong::after {
+  content: "";
+  right: 6%;
+  top: 12%;
+  width: 9px;
+  height: 13px;
+  border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+  background: linear-gradient(#dff1ff, #8fc6ef);
+  box-shadow: inset 1px 1px 0 rgb(255 255 255 / 0.7);
+  animation: kSweat 1.5s ease-in both;
+}
+/* A flame trail for a run of right answers. */
+.kchar-holder.react-streak::after {
+  content: "🔥";
+  right: -6px;
+  bottom: 6%;
+  font-size: 15px;
+  animation: kFlame 0.8s ease-out 2 both;
+}
+@keyframes kSparkle {
+  0% { opacity: 0; transform: translateY(6px) scale(0.6) rotate(-8deg); }
+  30% { opacity: 1; transform: translateY(-4px) scale(1.1) rotate(4deg); }
+  100% { opacity: 0; transform: translateY(-22px) scale(0.9) rotate(12deg); }
+}
+@keyframes kGlow {
+  0% { opacity: 0; transform: scaleX(0.6); }
+  40% { opacity: 1; transform: scaleX(1.05); }
+  100% { opacity: 0; transform: scaleX(1.2); }
+}
+@keyframes kSweat {
+  0% { opacity: 0; transform: translateY(-6px) scale(0.4); }
+  25% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(22px) scale(0.8); }
+}
+@keyframes kFlame {
+  0% { opacity: 0; transform: scale(0.5); }
+  35% { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 0; transform: scale(0.9) translateY(-10px); }
+}
+
+/* Nothing thrown when the phone asks for less motion — the reactions still
+   change the static pose (brows, droop) but stop moving. */
+@media (prefers-reduced-motion: reduce) {
+  .kchar-holder .kchar,
+  .kchar-holder .kchar *,
+  .kchar-holder::before,
+  .kchar-holder::after,
+  .kchar .keye,
+  .kchar .klid,
+  .kchar .keye-b {
+    animation: none !important;
+  }
+}
