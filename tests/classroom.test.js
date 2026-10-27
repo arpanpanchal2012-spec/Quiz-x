@@ -331,6 +331,45 @@ test("every player is given a character of their own", { timeout: 60000 }, async
       assert.ok(me.character && me.character !== "photo:nope", me.character);
       assert.ok(!me.character.includes(":"), me.character);
     });
+    await t.test("a player's own face goes into the room, and only there", async () => {
+      const p = await socket();
+      const joined = await new Promise((resolve) => {
+        p.ws.on("message", (raw) => {
+          const m = JSON.parse(raw);
+          if (m.type === "joined") resolve(m);
+        });
+        p.ws.send(JSON.stringify({ type: "join_game", code, name: "Player 12" }));
+      });
+      // A one-pixel WebP is enough: the room never inspects the picture, it
+      // stores the bytes and hands them back to the screens in that room.
+      const pixel =
+        "data:image/webp;base64,UklGRiIAAABXRUJQVlA4TBEAAAAvAAAAAAfQ//73v/+BiOh/AAA=";
+      const noToken = await request("/api/live-avatar", "POST", {
+        code,
+        token: "not-a-token",
+        image: pixel,
+      });
+      assert.equal(noToken.status, 403);
+      const ok = await request("/api/live-avatar", "POST", {
+        code,
+        token: joined.playerToken,
+        image: pixel,
+      });
+      assert.equal(ok.status, 200, JSON.stringify(ok.value));
+      assert.equal(ok.value.character, `self:${joined.playerId}`);
+      const img = await fetch(`${origin}/live-avatar/${code}/${joined.playerId}.webp`);
+      assert.equal(img.status, 200);
+      assert.equal(img.headers.get("content-type"), "image/webp");
+      assert.equal(img.headers.get("cache-control"), "no-store, max-age=0");
+      // And the seat's look is the face from then on.
+      const cleared = await request("/api/live-avatar", "DELETE", {
+        code,
+        token: joined.playerToken,
+      });
+      assert.equal(cleared.status, 200);
+      assert.ok(!String(cleared.value.character).startsWith("self:"));
+      p.ws.close();
+    });
     await t.test("nonsense picks are replaced, never stored", async () => {
       const p = await socket();
       sockets.push(p);
@@ -407,7 +446,7 @@ test("every player is given a character of their own", { timeout: 60000 }, async
       const row = db.prepare("SELECT document FROM live_games WHERE code=?").get(code);
       assert.ok(row, "the room was not snapshotted");
       const doc = JSON.parse(row.document);
-      assert.equal(doc.players.length, 11);
+      assert.equal(doc.players.length, 12);
       for (const p of doc.players)
         assert.ok(p.character, `${p.name} has no saved character`);
       const owl = doc.players.find((p) => p.name === "Player 7");
