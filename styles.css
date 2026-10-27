@@ -2595,69 +2595,8 @@ textarea:focus-visible {
 .music-control audio {
   max-width: 100%;
 }
-.podium {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 10px;
-  margin: 30px 0 12px;
-  min-height: 220px;
-}
-.podium-place {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 8px;
-  width: 30%;
-  max-width: 170px;
-  padding: 16px 10px;
-  background: #eee5fb;
-  color: #432775;
-  border-radius: 12px 12px 0 0;
-  animation: podiumRise 0.7s ease-out;
-  overflow-wrap: anywhere;
-  text-align: center;
-}
-.podium-place b {
-  font-size: 15px;
-  max-width: 100%;
-}
-.podium-place small {
-  font-size: 11px;
-}
-.podium-place strong {
-  font-size: 44px;
-  font-weight: 900;
-  line-height: 1;
-}
-.podium-place > span {
-  font-size: 26px;
-}
-.place-1 {
-  min-height: 215px;
-  background: #ffc43d;
-  color: #392806;
-}
-.place-2 {
-  min-height: 170px;
-}
-.place-3 {
-  min-height: 140px;
-  background: #ead8c9;
-  color: #5c3821;
-}
-.celebration {
-  text-align: center;
-  letter-spacing: 8px;
-  color: #7650b2;
-  font-size: 24px;
-  animation: celebrate 1.3s ease-in-out 3;
-}
-.leaderboard li {
-  border-radius: 10px;
-  background: #f5f0fc;
-}
+/* Podium: drawn in the rc.20 block at the end of this file. */
+
 .leaderboard li:first-child {
   background: #fff3cc;
 }
@@ -2884,12 +2823,6 @@ textarea:focus-visible {
   }
   .podium {
     gap: 7px;
-  }
-  .podium-place {
-    padding: 12px 7px;
-  }
-  .podium-place b {
-    font-size: 12px;
   }
   .sound-controls {
     gap: 8px;
@@ -3980,36 +3913,9 @@ body:has(#gameModal.open) {
     padding: 12px 8px;
   }
 }
-/* Compact, immediately readable winners on the host's announcing screen. */
-#hostResults .podium {
-  min-height: 0;
-  margin: 12px 0;
-  align-items: stretch;
-}
-#hostResults .podium-place {
-  min-height: 0;
-  max-width: 260px;
-  padding: 12px;
-  gap: 4px;
-  border-radius: 12px;
-  animation: none;
-}
-#hostResults .podium-place b {
-  font-size: 18px;
-}
-#hostResults .podium-place small {
-  font-size: 14px;
-}
-#hostResults .podium-place strong {
-  font-size: 28px;
-}
-#hostResults .podium-place > span {
-  font-size: 20px;
-}
-#hostResults .celebration {
-  display: none;
-}
-
+/* The host's announcing screen uses the podium drawn for it at the end of this
+   file; the old stacked winner cards are gone. */
+#hostResults .podium { margin: 10px auto 0; }
 /* Quizzes Studio 0.8 — original presentation-focused visual system. */
 :root {
   --ink: #242033;
@@ -5768,7 +5674,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   background: #fff;
   border-radius: 12px;
 }
-.display-standings li:first-child {
+.display-standings ol:not(.display-podium-rest) > li:first-child {
   background: #fff0b8;
   border: 2px solid #d4ab40;
 }
@@ -7300,7 +7206,8 @@ body.reordering {
 }
 /* The explainer picture has done its job: at the reveal the room reads the
    question, the bars and the answers, with no image competing for the eye. */
-#gameModal[data-bars="on"] .live-media-row {
+#gameModal[data-bars="on"] .live-media-row,
+#gameModal[data-bars="on"] .host-media-band {
   display: none !important;
 }
 @media (max-height: 820px) {
@@ -7494,6 +7401,24 @@ body.reordering {
   font-size: 15px;
   letter-spacing: 0.02em;
 }
+/* On a phone the round label and the clock share one line; the clock keeps its
+   pill whole and the label gives way instead of pushing it off the card. */
+#playerQuestion .player-meta > #playerRound {
+  min-width: 0;
+}
+#playerQuestion .player-meta > #playerTimer,
+#playerQuestion .player-meta > .player-chip {
+  flex: 0 0 auto;
+}
+@media (max-width: 560px) {
+  #playerQuestion .player-meta {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+  #playerQuestion .player-meta > #playerRound {
+    flex: 1 1 0;
+  }
+}
 #gameModal.open #hostTimer.timer-urgent,
 #gameModal.open #playerTimer.timer-urgent {
   background: #ff5f86 !important;
@@ -7551,6 +7476,33 @@ body.reordering {
   background: linear-gradient(180deg, #ff8aa2, #e05574) !important;
   color: #fff !important;
   box-shadow: 0 7px 0 #96203c, 0 14px 30px #0b06205c;
+}
+
+/* The phone carries the same six colours as the screen, so a player can shout
+   "the green one" and everyone in the room is looking at the same green. */
+#playerOptions .p-answer[data-answer="0"] {
+  background: linear-gradient(180deg, #9a5ee8, #6f34c0) !important;
+  color: #fff !important;
+}
+#playerOptions .p-answer[data-answer="1"] {
+  background: linear-gradient(180deg, #4a8df0, #2a5fbb) !important;
+  color: #fff !important;
+}
+#playerOptions .p-answer[data-answer="2"] {
+  background: linear-gradient(180deg, #f6c542, #d99a12) !important;
+  color: #3a2700 !important;
+}
+#playerOptions .p-answer[data-answer="3"] {
+  background: linear-gradient(180deg, #3ecb95, #1c9a6c) !important;
+  color: #04301f !important;
+}
+#playerOptions .p-answer[data-answer="4"] {
+  background: linear-gradient(180deg, #c07ef2, #8f45c9) !important;
+  color: #fff !important;
+}
+#playerOptions .p-answer[data-answer="5"] {
+  background: linear-gradient(180deg, #ff8aa2, #e05574) !important;
+  color: #fff !important;
 }
 
 /* The reveal marks: a tick on the right answer, a cross on the rest. */
@@ -7830,7 +7782,7 @@ body.reordering {
   color: #fff;
   font-weight: 700;
 }
-.display-standings li:first-child {
+.display-standings > ol:not(.display-podium-rest) > li:first-child {
   background: linear-gradient(180deg, #ffd97a, #f0b429);
   border-color: #ffe6a1;
   color: #3a2a00;
@@ -7901,4 +7853,720 @@ body.reordering {
 /* A toast must never sit on top of the host's next button, even while it fades. */
 body:has(#gameModal.open) .toast {
   bottom: 104px;
+}
+
+/* ===== rc.20 — the picture across the whole width ========================
+   A question image is the reason the question exists: it spans the stage, not
+   a thumbnail between two discs. Nothing is cropped — the height is capped and
+   the picture keeps its shape.
+   ======================================================================= */
+
+/* Host screen: the picture gets its own band under the question. */
+#hostMedia {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+}
+#gameModal.open .host-media-band {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+#gameModal.open .host-media-band:empty {
+  display: none;
+}
+/* The card spans the stage and the picture fills the card: no small picture in
+   the middle of a dark screen. */
+#gameModal.open .host-media-band:empty {
+  display: none !important;
+}
+#gameModal.open .host-media-band:not(:empty) {
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff14, #ffffff08);
+  border: 1px solid #ffffff1f;
+  box-shadow: 0 12px 30px #0d072466;
+  padding: 6px;
+}
+#gameModal.open #hostMedia {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+#gameModal.open #hostMedia .question-media,
+#gameModal.open #hostMedia img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  min-height: 0;
+  margin: 0 auto;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: none;
+}
+#gameModal.open #hostMedia audio { width: 100%; }
+/* Six answers beside a picture sit three across on the host screen too. */
+#gameModal.open #hostOptions:has(.answer:nth-child(5)) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+/* The clock and the answer meter keep their places either side, on their own
+   line, so they never squeeze the picture. */
+#gameModal.open .live-media-row {
+  width: 100%;
+  padding: 0;
+}
+#gameModal.open .live-media-row #hostMedia { display: none; }
+
+/* Phones: the same idea on a small screen. */
+#playerMedia { width: 100%; margin: 0 auto; }
+#playerMedia .question-media,
+#playerMedia img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 30vh;
+  object-fit: contain;
+  border-radius: 12px;
+  margin: 0 auto;
+}
+
+/* A short laptop screen: the card still has to fit without scrolling, so the
+   picture gives up a little height before the answers do. */
+@media (max-height: 820px) and (min-width: 721px) {
+  #playerMedia .question-media,
+  #playerMedia img {
+    max-height: 24vh;
+  }
+  .participant-card {
+    padding-top: 26px;
+    padding-bottom: 26px;
+  }
+}
+
+/* Projector: full-bleed picture, question above it, answers below. */
+.display-media {
+  width: 100%;
+  margin: 10px auto;
+  display: flex;
+  justify-content: center;
+}
+.display-media img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  max-height: var(--display-media, 280px);
+  object-fit: contain;
+  border-radius: 14px;
+  box-shadow: 0 14px 34px #0d072480;
+}
+/* The picture owns the width of the stage, and takes every pixel of height the
+   question and the answers do not need. It is never cropped. */
+.display-question.has-image {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  /* The section takes the whole stage, so the picture can take the whole
+     width of the stage without the answers being pushed off it. */
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+}
+.display-question.has-image .display-media {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 6px 0;
+  /* A full-width media band: the card spans the stage edge to edge, and the
+     picture inside is as large as the band allows. */
+  width: 100%;
+  padding: 6px;
+  background: linear-gradient(180deg, #ffffff14, #ffffff08);
+  border: 1px solid #ffffff1f;
+  border-radius: 16px;
+  box-shadow: 0 14px 34px #0d072466;
+}
+.display-question.has-image .display-media img {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  box-shadow: none;
+  border-radius: 10px;
+}
+/* Six answers under a picture sit three across, leaving the picture the height
+   it needs instead of three short rows taking it. */
+.display-question.has-image .display-options:has(.display-option:nth-child(5)) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.display-question.has-image .display-options { margin-top: 6px; flex: 0 0 auto; }
+.display-question.has-image h1,
+.display-question.has-image .display-meta { flex: 0 0 auto; }
+.display-question.has-image h1 {
+  font-size: calc(var(--display-question, 48px) * 0.82);
+  padding: 12px 22px;
+  margin: 8px 0;
+}
+/* The right answer, once it has been revealed. */
+.display-answer-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 14px 0 0;
+  font-size: calc(var(--display-answer, 30px) * 0.75);
+  font-weight: 800;
+  color: #8bffc0;
+}
+
+/* ===== rc.20 — the podium at the end of the night ========================
+   Three pedestals, the players' own characters standing on them, the winner in
+   the middle and highest.
+   ======================================================================= */
+.podium {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr);
+  align-items: end;
+  gap: clamp(8px, 1.4vw, 22px);
+  width: min(1040px, 100%);
+  margin: 6px auto 0;
+}
+.podium-place {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  animation: podiumRise 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.podium-place.place-1 { animation-delay: 0.35s; }
+.podium-place.place-3 { animation-delay: 0.2s; }
+.podium-figure {
+  display: block;
+  width: min(150px, 100%);
+  height: clamp(92px, 17vh, 190px);
+  margin-bottom: -4px;
+}
+.podium-place.place-1 .podium-figure {
+  width: min(190px, 100%);
+  height: clamp(120px, 23vh, 260px);
+}
+.podium-figure .kchar { width: 100%; height: 100%; }
+.podium-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 8px 14px;
+  border-radius: 14px 14px 4px 4px;
+  background: linear-gradient(180deg, #ffffff1f, #ffffff0d);
+  border: 1px solid #ffffff26;
+  box-shadow: 0 14px 30px #0d072466;
+  min-height: clamp(84px, 13vh, 150px);
+}
+.podium-place.place-1 .podium-block {
+  background: linear-gradient(180deg, #ffd97a, #e6a51a);
+  border-color: #ffe6a1;
+  color: #3a2a00;
+  min-height: clamp(110px, 17vh, 190px);
+  box-shadow: 0 8px 0 #b8860b, 0 18px 36px #0d072480;
+}
+.podium-place.place-2 .podium-block {
+  background: linear-gradient(180deg, #d8dce6, #a7aeba);
+  border-color: #eef1f6;
+  color: #2a2f3a;
+  box-shadow: 0 8px 0 #7c8492, 0 18px 36px #0d072466;
+}
+.podium-place.place-3 .podium-block {
+  background: linear-gradient(180deg, #e2a97c, #b9764a);
+  border-color: #f3cbaa;
+  color: #3a1d0b;
+  box-shadow: 0 8px 0 #8a4f2c, 0 18px 36px #0d072466;
+}
+.podium-badge {
+  display: grid;
+  place-items: center;
+  width: clamp(34px, 4vw, 54px);
+  height: clamp(34px, 4vw, 54px);
+  border-radius: 50%;
+  background: #ffffff;
+  color: #2a1b5a;
+  font-weight: 900;
+  font-size: clamp(18px, 2vw, 26px);
+  margin-top: -18px;
+  box-shadow: 0 4px 0 #00000033;
+}
+.podium-place.place-1 .podium-badge { background: #fff8dc; color: #8a5e00; }
+.podium-name {
+  font-size: clamp(14px, 1.3vw, 20px);
+  word-break: normal;
+  hyphens: none;
+  font-weight: 800;
+  line-height: 1.15;
+  margin-top: 4px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+.podium-score {
+  font-size: clamp(15px, 1.5vw, 20px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.9;
+}
+.podium-score small { font-weight: 600; font-size: 0.8em; opacity: 0.8; }
+.podium-rest {
+  list-style: none;
+  width: min(720px, 100%);
+  margin: 12px auto 0;
+  padding: 0;
+  max-height: 90px;
+  overflow: auto;
+}
+.podium-rest li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  margin-bottom: 6px;
+  border-radius: 10px;
+  background: #ffffff10;
+  border: 1px solid #ffffff1f;
+  color: #fff;
+  font-weight: 700;
+}
+.podium-rest .rank {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #ffffff26;
+  font-size: 12px;
+  flex: 0 0 auto;
+}
+.podium-rest span { flex: 1; overflow-wrap: anywhere; }
+.podium-rest strong { font-variant-numeric: tabular-nums; }
+@keyframes podiumRise {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .podium-place { animation: none; }
+}
+
+/* The host stage at the end: the podium is the screen. */
+#gameModal.open #hostResults { width: 100%; }
+#gameModal.open .celebration {
+  text-align: center;
+  color: #ffd97a;
+  letter-spacing: 0.4em;
+  margin-top: 10px;
+  font-size: 14px;
+  opacity: 0.8;
+}
+@media (max-height: 820px) {
+  .podium-figure { height: clamp(76px, 14vh, 130px); }
+  .podium-place.place-1 .podium-figure { height: clamp(96px, 18vh, 170px); }
+  .podium-block { min-height: 76px; padding: 6px 6px 8px; }
+  .podium-place.place-1 .podium-block { min-height: 96px; }
+  .podium-badge { margin-top: -20px; }
+  .podium-rest { max-height: 66px; }
+}
+/* At the end the stage centres the podium; if a very long list of players is
+   below it, the list scrolls rather than the screen being cut off. */
+#gameModal[data-phase="ended"] .stage-question {
+  justify-content: flex-start;
+  overflow: auto;
+}
+#gameModal[data-phase="ended"] #hostQuestion {
+  font-size: clamp(24px, 4vh, 40px);
+  padding: 8px 20px;
+}
+
+/* The projector's podium, built to be read from the back of a hall. */
+.display-standings.display-final { width: min(1500px, 100%); text-align: center; }
+.display-standings.display-final .eyebrow { color: #b9aede; }
+.display-podium {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr);
+  align-items: end;
+  gap: 2vw;
+  /* The "Final results" line sits above the tallest character's ears. */
+  margin: 3.4vh auto 0;
+  width: 100%;
+}
+.display-podium-place {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  animation: podiumRise 0.8s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.display-podium-place.place-1 { animation-delay: 0.4s; }
+.display-podium-place.place-3 { animation-delay: 0.2s; }
+.display-podium-figure {
+  display: block;
+  width: clamp(90px, 10vw, 185px);
+  height: clamp(140px, 17vw, 288px);
+  margin-bottom: -10px;
+}
+.display-podium-place.place-1 .display-podium-figure {
+  width: clamp(120px, 13vw, 240px);
+  height: clamp(190px, 21vw, 360px);
+}
+.display-podium-figure .kchar { width: 100%; height: 100%; }
+.display-podium-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 1.4vh 1vw 2vh;
+  border-radius: 18px 18px 6px 6px;
+  background: linear-gradient(180deg, #ffffff26, #ffffff10);
+  border: 1px solid #ffffff2b;
+  box-shadow: 0 16px 34px #0d072466;
+  min-height: clamp(140px, 20vh, 260px);
+}
+.display-podium-place.place-1 .display-podium-block {
+  background: linear-gradient(180deg, #ffd97a, #e6a51a);
+  border-color: #ffe6a1;
+  color: #3a2a00;
+  min-height: clamp(180px, 27vh, 340px);
+  box-shadow: 0 10px 0 #b8860b, 0 20px 40px #0d072480;
+}
+.display-podium-place.place-2 .display-podium-block {
+  background: linear-gradient(180deg, #d8dce6, #a7aeba);
+  border-color: #eef1f6;
+  color: #2a2f3a;
+  box-shadow: 0 10px 0 #7c8492, 0 20px 40px #0d072466;
+}
+.display-podium-place.place-3 .display-podium-block {
+  background: linear-gradient(180deg, #e2a97c, #b9764a);
+  border-color: #f3cbaa;
+  color: #3a1d0b;
+  box-shadow: 0 10px 0 #8a4f2c, 0 20px 40px #0d072466;
+}
+.display-podium-badge {
+  display: grid;
+  place-items: center;
+  width: clamp(46px, 4.4vw, 82px);
+  height: clamp(46px, 4.4vw, 82px);
+  border-radius: 50%;
+  background: #fff;
+  color: #2a1b5a;
+  font-weight: 900;
+  font-size: clamp(24px, 2.4vw, 44px);
+  margin-top: -2.2vh;
+  box-shadow: 0 6px 0 #00000033;
+}
+.display-podium-place.place-1 .display-podium-badge { background: #fff8dc; color: #8a5e00; }
+.display-podium-block b {
+  font-size: clamp(24px, 2.6vw, 48px);
+  font-weight: 800;
+  line-height: 1.1;
+  margin-top: 1vh;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.display-podium-score {
+  font-size: clamp(22px, 2.4vw, 44px);
+  margin-top: -0.4vh;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.92;
+}
+.display-podium-rest {
+  list-style: none;
+  width: min(900px, 90%);
+  margin: 2vh auto 0;
+  padding: 0;
+}
+.display-podium-rest li {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0.8vh 18px;
+  margin-bottom: 6px;
+  border-radius: 12px;
+  background: #ffffff10;
+  border: 1px solid #ffffff1f;
+  color: #fff;
+  font-size: clamp(18px, 1.4vw, 26px);
+  font-weight: 700;
+}
+.display-podium-rest b {
+  display: grid;
+  place-items: center;
+  width: 1.9em;
+  height: 1.9em;
+  border-radius: 50%;
+  background: #ffffff26;
+  font-size: 0.7em;
+  flex: 0 0 auto;
+}
+.display-podium-rest span { flex: 1; overflow-wrap: anywhere; }
+.display-podium-rest strong { font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) {
+  .display-podium-place { animation: none; }
+}
+
+/* ===== rc.20 — the projector lobby: join card, title, who is here ======= */
+.projector-room {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.85fr) minmax(0, 1.6fr) minmax(260px, 0.9fr);
+  gap: 2vw;
+  align-items: stretch;
+  width: 100%;
+  max-width: 1700px;
+  margin: auto;
+  text-align: left;
+}
+.projector-join {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 4vh 1.6vw;
+  background: #ffffff0f;
+  border: 1px solid #ffffff26;
+  border-radius: 20px;
+  box-shadow: 0 20px 50px #0d072480;
+}
+.projector-join small { color: #b9aede; letter-spacing: 0.16em; font-weight: 800; }
+.projector-join .join-qr { width: min(220px, 100%); background: #fff; border-radius: 12px; padding: 8px; }
+.projector-join-label {
+  color: #b9aede;
+  letter-spacing: 0.14em;
+  font-weight: 800;
+  font-size: 0.86em;
+  margin-top: 6px;
+}
+.projector-join strong {
+  font-size: clamp(30px, 3.4vw, 62px);
+  letter-spacing: 0.06em;
+  color: #ffd97a;
+  line-height: 1.05;
+}
+.projector-join p { margin: 0; color: #c2b7e6; font-size: clamp(13px, 1vw, 18px); overflow-wrap: anywhere; }
+.projector-room-centre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2vh 1vw;
+}
+.projector-room-centre .eyebrow { color: #b9aede; }
+.projector-room-centre h1 {
+  font-size: clamp(34px, 4.6vw, 88px);
+  line-height: 1.1;
+  margin: 1.6vh 0;
+  overflow-wrap: anywhere;
+}
+.projector-room-count { color: #c2b7e6; font-size: clamp(16px, 1.3vw, 26px); margin: 0; }
+.projector-room-count b { color: #fff; }
+.projector-people {
+  display: flex;
+  flex-direction: column;
+  padding: 3vh 1.4vw;
+  background: #ffffff0f;
+  border: 1px solid #ffffff26;
+  border-radius: 20px;
+  box-shadow: 0 20px 50px #0d072480;
+  min-height: 0;
+}
+.projector-people .eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #b9aede;
+  margin-bottom: 1.4vh;
+}
+.projector-people .eyebrow b {
+  display: grid;
+  place-items: center;
+  min-width: 1.9em;
+  height: 1.9em;
+  padding: 0 0.4em;
+  border-radius: 999px;
+  background: #ffffff1f;
+  color: #fff;
+  font-size: 0.9em;
+}
+.projector-people ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.9vh;
+  overflow: auto;
+  min-height: 0;
+}
+.projector-people li {
+  padding: 1vh 0.9vw;
+  border-radius: 12px;
+  background: #ffffff14;
+  border: 1px solid #ffffff1f;
+  color: #fff;
+  font-size: clamp(16px, 1.3vw, 26px);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.projector-people li.is-away { opacity: 0.5; }
+.projector-people .muted { color: #b9aede; }
+@media (max-width: 1100px) {
+  .projector-room { grid-template-columns: 1fr; }
+  .projector-people { max-height: 30vh; }
+}
+
+/* Empty lines take no room: with the instructions gone the phone reads
+   question → picture → answers, nothing else. */
+#playerHint:empty,
+#answerStatus:empty,
+#hostHint:empty {
+  display: none;
+}
+
+/* The stage with a picture is a column that shares its height honestly: the
+   question and the answers keep their size, the picture takes the rest, and
+   nothing is cut off at either end. */
+#gameModal.open .game-stage {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* Long questions and browser zoom still scroll; ordinary questions fit. */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+#gameModal.open .stage-question {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  overflow: hidden;
+}
+/* A very short window (a zoomed browser, a phone in landscape) gives the stage
+   its scroll back rather than cutting the question off. */
+@media (max-height: 520px) {
+  #gameModal.open .stage-question {
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+}
+#gameModal.open .stage-question > * { flex: 0 0 auto; }
+#gameModal.open .host-media-band {
+  flex: 1 1 auto;
+  min-height: 72px;
+  max-height: none;
+}
+#gameModal.open #hostMedia,
+#gameModal.open #hostMedia img,
+#gameModal.open #hostMedia .question-media {
+  min-height: 0;
+  max-height: 100%;
+}
+/* Six answers under a picture: two tidy rows, not three tall ones. */
+#gameModal.open .stage-question.has-media #hostOptions .answer {
+  min-height: clamp(44px, 7vh, 74px);
+}
+/* A picture question spends its height on the picture: the clock row tightens,
+   the question card loses some padding and the tiles keep a working height.
+   Nothing is cropped — the picture simply gets the room it needs to be wide. */
+#gameModal.open .stage-question.has-media .live-media-row {
+  min-height: 0;
+  height: 84px;
+  align-items: center;
+}
+/* No coaching line over a picture question on the host stage either: the
+   question, the picture and the answers are the whole screen. */
+#gameModal.open .stage-question.has-media #hostHint {
+  display: none;
+}
+#gameModal.open .stage-question.has-media #hostQuestion {
+  /* Never below the 36px floor: a picture question is still read from the back. */
+  font-size: clamp(36px, 2.6vw, 42px);
+  padding: 12px 22px;
+  line-height: 1.2;
+}
+#gameModal.open .stage-question.has-media #hostOptions .answer {
+  font-size: clamp(28px, 2.3vw, 34px);
+  min-height: clamp(44px, 6.4vh, 66px);
+}
+
+/* ===== rc.21 — the nineteen picture characters ===========================
+   A look is either a drawn character or one of the picture characters the host
+   supplied. Both arrive as one .kchar element inside .kchar-holder, so the
+   layout below only has to answer one question: what shape is the slot when
+   the figure is a square picture rather than a tall drawing?
+   ======================================================================== */
+
+/* The picker now offers three tabs: Characters (pictures), Drawn, Accessory. */
+.char-tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.char-tabs button {
+  font-size: 13px;
+  padding: 9px 4px;
+}
+
+/* Pictures are square, so they get their own grid — four to a row on a phone,
+   five on anything wider, instead of the five narrow columns the drawings use. */
+.char-grid.photo-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.photo-tile {
+  padding: 4px 3px 3px;
+}
+.photo-tile img.kchar {
+  height: clamp(48px, 11vh, 68px);
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+@media (min-width: 560px) {
+  .char-grid.photo-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+/* The figure slots. A drawing is tall and narrow; a picture is a square, so it
+   is centred in the same slot at the largest size that fits. */
+.kchar-holder.is-photo {
+  width: 96px;
+  height: 96px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.kchar-holder.kchar-hero.is-photo {
+  width: clamp(96px, 21vh, 132px);
+  height: clamp(96px, 21vh, 132px);
+}
+.player-chip .kchar-holder.is-photo {
+  width: 28px;
+  height: 28px;
+}
+.player-identity .kchar-holder.kchar-hero.is-photo {
+  width: 104px;
+  height: 104px;
+}
+/* On a pedestal the winner stands taller than the runners-up, exactly as a
+   drawing does — only the height changes, never the square. */
+.podium-figure .kchar-photo,
+.display-podium-figure .kchar-photo {
+  object-fit: contain;
+  object-position: 50% 100%;
 }

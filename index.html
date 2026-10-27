@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#513293" />
     <title>Quizzes · Live learning, together</title>
-    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.20" />
-    <link rel="stylesheet" href="/characters.css?v=0.9.0-rc.20" />
+    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.21" />
+    <link rel="stylesheet" href="/characters.css?v=0.9.0-rc.21" />
   </head>
   <body>
     <div class="app-shell" id="hostApp">
@@ -875,11 +875,11 @@
               </p>
               <div class="live-media-row">
                 <span class="live-dot" id="hostTimer" role="timer">READY</span>
-                <div id="hostMedia"></div>
                 <div class="live-answer-counter">
                   <b id="liveAnswerMeter">0</b><span>Answers</span>
                 </div>
               </div>
+              <div class="host-media-band" id="hostMedia"></div>
             <section
               class="stage-results"
               id="resultsStage"
@@ -1040,12 +1040,22 @@
                 <button
                   type="button"
                   role="tab"
+                  id="charTabPhoto"
+                  data-char-tab="photo"
+                  aria-selected="true"
+                  aria-controls="photoGrid"
+                >
+                  Characters
+                </button>
+                <button
+                  type="button"
+                  role="tab"
                   id="charTabCharacter"
                   data-char-tab="character"
-                  aria-selected="true"
+                  aria-selected="false"
                   aria-controls="charGrid"
                 >
-                  Character
+                  Drawn
                 </button>
                 <button
                   type="button"
@@ -1059,10 +1069,17 @@
                 </button>
               </div>
               <div
+                class="char-grid photo-grid"
+                id="photoGrid"
+                role="group"
+                aria-label="Choose a character"
+              ></div>
+              <div
                 class="char-grid"
                 id="charGrid"
                 role="group"
-                aria-label="Choose a character"
+                aria-label="Choose a drawn character"
+                hidden
               ></div>
               <div
                 class="char-grid"
@@ -1353,11 +1370,11 @@ Answer: together</pre
       </p>
       <div id="draftRecoveryList"></div>
     </dialog>
-    <script src="/qr-code.js?v=0.9.0-rc.20"></script>
-    <script src="/quiz-sound.js?v=0.9.0-rc.20"></script>
-    <script src="/characters.js?v=0.9.0-rc.20"></script>
-    <script src="/app.js?v=0.9.0-rc.20"></script>
-    <script src="/extensions.js?v=0.9.0-rc.20"></script>
-    <script src="/professional.js?v=0.9.0-rc.20"></script>
+    <script src="/qr-code.js?v=0.9.0-rc.21"></script>
+    <script src="/quiz-sound.js?v=0.9.0-rc.21"></script>
+    <script src="/characters.js?v=0.9.0-rc.21"></script>
+    <script src="/app.js?v=0.9.0-rc.21"></script>
+    <script src="/extensions.js?v=0.9.0-rc.21"></script>
+    <script src="/professional.js?v=0.9.0-rc.21"></script>
   </body>
 </html>

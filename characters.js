@@ -54,6 +54,40 @@
     { id: "bowtie", label: "Bow tie" },
   ];
 
+  // The nineteen ready-made characters, supplied as pictures. They are not
+  // drawn in this file: each one is a WebP sprite in characters/, named the same
+  // as its id. A picture character carries the `photo:` prefix so its id can
+  // never collide with a drawn one, and so a phone running an older release —
+  // which only knows how to draw — falls back to a drawing instead of a hole.
+  // A picture cannot wear a drawn hat, so a picture look has no accessory.
+  const PHOTO_CHARACTERS = [
+    { id: "sparkle", label: "Sparkle" },
+    { id: "nova", label: "Nova" },
+    { id: "pixel", label: "Pixel" },
+    { id: "ruby", label: "Ruby" },
+    { id: "royal", label: "Royal" },
+    { id: "rocky", label: "Rocky" },
+    { id: "kitty", label: "Kitty" },
+    { id: "dino", label: "Dino" },
+    { id: "unicorn", label: "Unicorn" },
+    { id: "wizard", label: "Wizard" },
+    { id: "hero", label: "Hero" },
+    { id: "samurai", label: "Samurai" },
+    { id: "chef", label: "Chef" },
+    { id: "alien", label: "Alien" },
+    { id: "viking", label: "Viking" },
+    { id: "pirate", label: "Pirate" },
+    { id: "grove", label: "Grove" },
+    { id: "blossom", label: "Blossom" },
+    { id: "sprout", label: "Sprout" },
+  ];
+  const PHOTO_PREFIX = "photo:";
+  const PHOTO_IDS = PHOTO_CHARACTERS.map((c) => PHOTO_PREFIX + c.id);
+  const photoOf = (id) =>
+    typeof id === "string" && id.startsWith(PHOTO_PREFIX)
+      ? PHOTO_CHARACTERS.find((p) => p.id === id.slice(PHOTO_PREFIX.length)) || null
+      : null;
+
   const CHARACTER_IDS = CHARACTERS.map((c) => c.id);
   const ACCESSORY_IDS = ACCESSORIES.map((a) => a.id);
   const byId = (list, id) => list.find((x) => x.id === id) || list[0];
@@ -345,6 +379,14 @@
   }
 
   function render(characterId, accessoryId, options = {}) {
+    // A picture character: the sprite is the whole figure, so the accessory is
+    // ignored and the same markup shape (a single .kchar element) comes back —
+    // every screen that positions a figure keeps working untouched.
+    const photo = photoOf(characterId);
+    if (photo) {
+      const size = options.thumb ? "-thumb" : "";
+      return `<img class="kchar kchar-photo${options.thumb ? " is-thumb" : ""}" src="/characters/ph-${photo.id}${size}.webp" alt="${options.label === false ? "" : `${photo.label} character`}" width="${options.thumb ? 176 : 512}" height="${options.thumb ? 176 : 512}" decoding="async" draggable="false" ${options.extra || ""} />`;
+    }
     const c = byId(CHARACTERS, characterId);
     const item = ITEMS[byId(ACCESSORIES, accessoryId).id] || ITEMS.none;
     const id = `kc${++uid}`;
@@ -369,10 +411,17 @@
   const api = {
     CHARACTERS,
     ACCESSORIES,
+    PHOTO_CHARACTERS,
     CHARACTER_IDS,
     ACCESSORY_IDS,
+    PHOTO_IDS,
+    photoOf,
+    isPhoto: (id) => !!photoOf(id),
     render,
-    label: (id) => byId(CHARACTERS, id).label,
+    // A picture id has no accessory of its own, so it reports its own name.
+    label: (id) => (photoOf(id) || byId(CHARACTERS, id)).label,
+    // Every id a join may carry: twelve drawings and nineteen pictures.
+    lookIds: () => [...PHOTO_IDS, ...CHARACTER_IDS],
     accessoryLabel: (id) => byId(ACCESSORIES, id).label,
     // The room hands out the next unused character, so a lobby is a crowd.
     pick: (used = []) => {

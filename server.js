@@ -843,6 +843,20 @@ const server = http.createServer(async (req, res) => {
       if (!m || !(await features.mediaAccess(req, id))) fail("Not found", 404);
       return await mediaStore.serve(req, res, id, m.mime);
     }
+    // The picture characters. A fixed name pattern and a directory join that
+    // cannot climb out of characters/ — nothing else is reachable here.
+    if (p.startsWith("/characters/")) {
+      const sprite = p.slice(12);
+      if (!/^ph-[a-z]+(-thumb)?\.webp$/.test(sprite)) return fail("Not found", 404);
+      const file = path.join(__dirname, "characters", sprite);
+      if (!fs.existsSync(file)) return fail("Not found", 404);
+      res.writeHead(200, {
+        "Content-Type": "image/webp",
+        "Cache-Control": "public, max-age=604800",
+        "X-Content-Type-Options": "nosniff",
+      });
+      return fs.createReadStream(file).pipe(res);
+    }
     const files = {
       "/": "index.html",
       "/join": "index.html",
@@ -941,12 +955,26 @@ const CHARACTER_IDS = [
   "bear", "cat", "fox", "bunny", "panda", "frog",
   "penguin", "owl", "tiger", "wolf", "unicorn", "monster",
 ];
+// The nineteen picture characters. They travel as `photo:<id>`, which no drawn
+// id can ever be, so a phone on an older release keeps drawing a figure instead
+// of showing nothing. A picture cannot wear a drawn accessory.
+const PHOTO_CHARACTER_IDS = [
+  "photo:sparkle", "photo:nova", "photo:pixel", "photo:ruby", "photo:royal",
+  "photo:rocky", "photo:kitty", "photo:dino", "photo:unicorn", "photo:wizard",
+  "photo:hero", "photo:samurai", "photo:chef", "photo:alien", "photo:viking",
+  "photo:pirate", "photo:grove", "photo:blossom", "photo:sprout",
+];
+const LOOK_IDS = [...CHARACTER_IDS, ...PHOTO_CHARACTER_IDS];
+const isPhoto = (id) => PHOTO_CHARACTER_IDS.includes(id);
+const characterOk = (id) => LOOK_IDS.includes(id);
 const ACCESSORY_IDS = [
   "none", "cap", "crown", "party", "wizard", "grad", "beanie",
   "cowboy", "headphones", "shades", "goggles", "helmet", "scarf", "bowtie",
 ];
 // A joining player takes a character nobody else in that room is using yet, so
-// a full lobby is a crowd of different animals rather than a dozen bears.
+// a full lobby is a crowd of different animals rather than a dozen bears. The
+// drawn characters are the default: the pictures are chosen on purpose, by the
+// player, from the picker.
 function pickCharacter(g) {
   const used = new Set([...(g?.players?.values() || [])].map((p) => p.character));
   const free = CHARACTER_IDS.filter((c) => !used.has(c));
@@ -956,12 +984,15 @@ function pickCharacter(g) {
 // Rooms saved before characters existed still come back with one per player,
 // and it stays the same character on every later restore.
 function characterFor(p) {
-  if (CHARACTER_IDS.includes(p?.character)) return p.character;
+  if (characterOk(p?.character)) return p.character;
   let hash = 0;
   for (const c of String(p?.id || "")) hash = (hash * 31 + c.codePointAt(0)) % 1e6;
   return CHARACTER_IDS[hash % CHARACTER_IDS.length];
 }
 function accessoryFor(p) {
+  // A picture look is complete as it is; a stored accessory from the drawn
+  // characters is simply not worn while a picture is chosen.
+  if (isPhoto(p?.character)) return "none";
   return ACCESSORY_IDS.includes(p?.accessory) ? p.accessory : "none";
 }
 const rosterPending = new Map();
@@ -1568,16 +1599,17 @@ wss.on("connection", (ws, req) => {
             seat.resumeToken = crypto.randomBytes(32).toString("hex");
             seat.ws = null;
             // Coming back is also a chance to change who you play as.
-            if (CHARACTER_IDS.includes(msg.character)) seat.character = msg.character;
+            if (characterOk(msg.character)) seat.character = msg.character;
             if (ACCESSORY_IDS.includes(msg.accessory))
               seat.accessory = msg.accessory;
+            seat.accessory = accessoryFor(seat);
             p = seat;
             reclaimed = true;
           } else {
             p = {
               id: crypto.randomUUID(),
               name,
-              character: CHARACTER_IDS.includes(msg.character)
+              character: characterOk(msg.character)
                 ? msg.character
                 : pickCharacter(g),
               accessory: ACCESSORY_IDS.includes(msg.accessory)

@@ -17,6 +17,21 @@ the middle, the four answer rows at the bottom with **✓** on the right one and
 **✗** on the others. That is the reveal now — on your screen and on the
 projector. The only thing that steps off the page is the question's picture.
 
+**The night should end on a podium.** The top three stand on gold, silver and
+bronze pedestals **in the character each player chose**, with the number, the name
+and the points on the pedestal, and everyone below third place in a plain row
+underneath. Same result on your screen and on the projector; the characters rise
+into place one after another.
+
+**Nothing on the big screen or the phone should tell people what to do.** At the
+question and the options the projector shows the question, the picture and the
+answers; the phone shows the same. Round announcements stay.
+
+**The picture should be big.** The answer picture now takes the stage: full width
+on the projector, a full-width band across the host screen, no cropping (it is
+letterboxed, never cut), and the answers still fit in two rows even with six
+options.
+
 **The whole app should look professional.** The live game — lobby, question,
 reveal, standings, end — now sits on the deep indigo Spotlight stage, with the
 question as a bright plate, chunky answer tiles with a colour lip and a cast
@@ -36,8 +51,9 @@ light studio look, because that is where you write, not where the room looks.
 
 Files that change this time: `app.js`, `display.js`, `styles.css`,
 `characters.js`, `characters.css`, `quiz-rules.js`, `index.html`, `package.json`,
-`display.html`, `rehearsal.html`, `LIMITS.md` and the docs. No new files — the two
-character files already arrived with rc.19.
+`display.html`, `rehearsal.html`, `LIMITS.md`, the browser proof
+(`tests/browser.spec.js`, `tests/professional-browser.js`) and the docs. No new
+files — the two character files already arrived with rc.19.
 
 If you are coming from rc.19 you can upload just this update zip. If you are
 coming from an older version than rc.19, upload this update zip **and** keep the
@@ -68,6 +84,10 @@ tiles.
   old copy; the current file sets the size and the crop.
 - **The reveal shows only the bars** — that is the rc.19 build; check `/healthz`
   says `0.9.0-rc.20`.
+- **The end screen is a plain list, not a podium** — `app.js` or `styles.css` is
+  an older copy; the podium block is at the end of `styles.css`.
+- **The picture still looks like a small box** — `styles.css` is stale; the
+  picture band sits in the last block of the file.
 - **A toast covers the Next question button** — that is fixed in this build; a
   toast never takes a click and sits higher while a game is open.
 - **The stage looks light instead of indigo** — `styles.css` is stale; the

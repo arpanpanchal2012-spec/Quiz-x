@@ -494,13 +494,21 @@ function mediaHTML(url, type, lazy = false) {
 // The face never appears on the host screen or the projector: those show names
 // and numbers only, so the room watches the quiz, not a wall of cartoons.
 const KCHARS = window.QuizzesCharacters || null;
-function characterSVG(player, className = "") {
-  if (!KCHARS) return "";
-  return `<span class="kchar-holder ${className}">${KCHARS.render(player?.character, player?.accessory)}</span>`;
+// A look is either one of the nineteen picture characters or one of the drawn
+// ones. A picture carries the `photo:` prefix, so one call site serves both: the
+// holder gets the same class in both cases and only the contents differ.
+function isPhotoLook(id) {
+  return !!KCHARS?.isPhoto?.(id);
 }
-// A tiny copy for headers and lists on the player's own phone.
+function characterSVG(player, className = "", options = {}) {
+  if (!KCHARS) return "";
+  const photo = isPhotoLook(player?.character) ? " is-photo" : "";
+  return `<span class="kchar-holder ${className}${photo}">${KCHARS.render(player?.character, player?.accessory, { thumb: !!options.thumb })}</span>`;
+}
+// A tiny copy for headers and lists on the player's own phone. The header chip
+// loads the 176 px sprite, not the full one.
 function characterChip(player, className = "kchar-chip") {
-  return characterSVG(player, className);
+  return characterSVG(player, className, { thumb: true });
 }
 let activeEditorQuestion = null;
 // One clock per round. A round almost always wants the same time on every
@@ -1894,15 +1902,16 @@ function renderQuestion() {
   // Step one: the question is on screen on its own and the host reads it out.
   // Step two begins when the host presses again and the options arrive.
   const optionsReady = q.optionsVisible !== false;
-  $(`#${prefix}Hint`).textContent = !optionsReady
-    ? participantMode
-      ? "Read the question on the big screen. The options are coming."
-      : "Read it out. Press “Show options” when the room is ready."
-    : q.type === "text"
-      ? "Type your answer and lock it in."
+  // The phone gets no instructions during a question — the question, the
+  // picture and the answers speak for themselves. The host keeps a one-line
+  // cue, because the two presses are the host's job.
+  $(`#${prefix}Hint`).textContent = participantMode
+    ? ""
+    : !optionsReady
+      ? "Read it out. Press “Show options” when the room is ready."
       : q.type === "multi"
-        ? "Select all correct answers, then submit. Wrong selections reduce partial credit."
-        : "Choose one answer.";
+        ? "Tick every correct answer, then submit."
+        : "";
   if (participantMode) {
     const began = performance.now();
     $("#playerMedia").innerHTML = mediaHTML(q.media, q.mediaType);
@@ -1931,6 +1940,12 @@ function renderQuestion() {
       if (image.complete && image.naturalWidth) report("ready");
     }
   } else renderHostImage(q);
+  // The layout knows whether a picture is on the page: with one, the answers
+  // give up a little height so the picture can be large.
+  $(".stage-question")?.classList.toggle(
+    "has-media",
+    !!q.media && !!q.mediaType?.startsWith("image/"),
+  );
   $(`#${prefix}Results`).innerHTML = "";
   const options = $(`#${prefix}Options`);
   options.innerHTML = "";
@@ -1996,11 +2011,13 @@ function renderQuestion() {
   if (participantMode) {
     $("#textAnswerForm").hidden = q.type !== "text" || !optionsReady;
     $("#textAnswer").value = "";
+    // Only state, never instruction: silence while the options are still
+    // coming, and a plain confirmation once an answer is in.
     $("#answerStatus").textContent = !optionsReady
-      ? "The options are coming. Watch the big screen."
+      ? ""
       : locked
         ? "Your answer is locked in."
-        : "Your first submission is final.";
+        : "";
     lockAnswers();
   } else {
     $("#hostQuestionNumber").textContent =
@@ -2084,6 +2101,11 @@ function hideAnswerChart() {
 }
 function renderResults(result) {
   stopQuestionAudio();
+  // The reveal is the answers, not the picture: the image leaves the stage so
+  // the question, the bars and the ticked tiles stand on their own.
+  $("#hostMedia").innerHTML = "";
+  $("#playerMedia").innerHTML = "";
+  $(".stage-question")?.classList.remove("has-media");
   sound.setPhase("results");
   setGameStyle("results");
   const prefix = participantMode ? "player" : "host";
@@ -2178,6 +2200,15 @@ function renderResults(result) {
 }
 function renderEnded(rows) {
   hideAnswerChart();
+  // The line under the answers belongs to the question that just closed; the
+  // final screen is the podium, so it is cleared rather than left hanging.
+  for (const id of ["hostAnswerSummary", "playerAnswerSummary"]) {
+    const line = $(`#${id}`);
+    if (line) {
+      line.textContent = "";
+      line.hidden = true;
+    }
+  }
   showLiveLeaderboard(false, []);
   $("#submitMulti").hidden = true;
   stopQuestionAudio();
@@ -2192,8 +2223,9 @@ function renderEnded(rows) {
     "Thank you for playing. Here are the final results.";
   $(`#${prefix}Options`).innerHTML = "";
   $(`#${prefix}Media`).innerHTML = "";
-  $(`#${prefix}Results`).innerHTML =
-    podiumHTML(rows || []) + leaderboardHTML(rows || []);
+  // The podium carries the top three; anyone below them is listed under it, so
+  // the same names are never printed twice.
+  $(`#${prefix}Results`).innerHTML = podiumHTML(rows || []);
   if (!participantMode) {
     $("#hostQuestion").textContent = "Final leaderboard";
     $("#hostHint").textContent =
@@ -2430,22 +2462,43 @@ $("#copyJoin").onclick = async () => {
 // comes back next week is the same animal in the same hat.
 const CHARACTER_STORE = "quizzes.player.look";
 function storedLook() {
+  const fallback = KCHARS?.CHARACTER_IDS[0] || "bear";
+  const known = (value) =>
+    isPhotoLook(value) || !!KCHARS?.CHARACTER_IDS.includes(value);
+  // A player who has never chosen starts on a picture, so the big preview above
+  // the grid is already the character they are about to play as.
+  const firstPicture = () => {
+    const ids = KCHARS?.PHOTO_IDS || [];
+    return ids.length
+      ? ids[Math.floor(Math.random() * ids.length)]
+      : (KCHARS?.pick() || fallback);
+  };
   try {
     const saved = JSON.parse(localStorage.getItem(CHARACTER_STORE) || "{}");
     return {
-      character: KCHARS?.CHARACTER_IDS.includes(saved.character)
-        ? saved.character
-        : (KCHARS?.pick() || "bear"),
+      character: known(saved.character) ? saved.character : firstPicture(),
       accessory: KCHARS?.ACCESSORY_IDS.includes(saved.accessory)
         ? saved.accessory
         : "none",
+      // The last drawn character, so an accessory can still be tried on while a
+      // picture is the current look — a picture cannot wear a drawn hat.
+      drawn: KCHARS?.CHARACTER_IDS.includes(saved.drawn) ? saved.drawn : fallback,
+      // Nothing chosen before: the picker opens on the pictures.
+      fresh: !known(saved.character),
     };
   } catch {
-    return { character: KCHARS?.CHARACTER_IDS[0] || "bear", accessory: "none" };
+    return { character: firstPicture(), accessory: "none", drawn: fallback, fresh: true };
   }
 }
 let look = storedLook();
-let lookTab = "character";
+// A returning player lands on the tab of the look they had; a new one starts on
+// the pictures, which is what they came to pick from.
+let lookTab = look.fresh || isPhotoLook(look.character) ? "photo" : "character";
+// Which drawn character the accessory tiles are drawn on.
+function accessoryBase() {
+  if (!isPhotoLook(look.character)) return look.character;
+  return look.drawn || KCHARS?.CHARACTER_IDS[0] || "bear";
+}
 function saveLook() {
   try {
     localStorage.setItem(CHARACTER_STORE, JSON.stringify(look));
@@ -2454,27 +2507,41 @@ function saveLook() {
   }
 }
 function renderLookPicker() {
+  const photoGrid = $("#photoGrid");
   const grid = $("#charGrid");
   const accessories = $("#accessoryGrid");
   const preview = $("#charPreview");
-  if (!grid || !accessories || !preview || !KCHARS) return;
+  if (!photoGrid || !grid || !accessories || !preview || !KCHARS) return;
   preview.innerHTML = characterSVG(look, "kchar-hero is-idle");
+  photoGrid.innerHTML = KCHARS.PHOTO_CHARACTERS.map(
+    (c) => {
+      const id = "photo:" + c.id;
+      return `<button type="button" class="kchar-tile photo-tile" data-character="${id}" aria-pressed="${id === look.character}">${KCHARS.render(id, "none", { label: false, thumb: true })}<span>${e(c.label)}</span></button>`;
+    },
+  ).join("");
   grid.innerHTML = KCHARS.CHARACTERS.map(
     (c) =>
       `<button type="button" class="kchar-tile" data-character="${c.id}" aria-pressed="${c.id === look.character}">${KCHARS.render(c.id, "none", { label: false })}<span>${e(c.label)}</span></button>`,
   ).join("");
   accessories.innerHTML = KCHARS.ACCESSORIES.map(
     (a) =>
-      `<button type="button" class="accessory-tile" data-accessory="${a.id}" aria-pressed="${a.id === look.accessory}" aria-label="${e(a.label)}" title="${e(a.label)}">${KCHARS.render(look.character, a.id, { label: false, head: true })}</button>`,
+      `<button type="button" class="accessory-tile" data-accessory="${a.id}" aria-pressed="${a.id === look.accessory && !isPhotoLook(look.character)}" aria-label="${e(a.label)}" title="${e(a.label)}">${KCHARS.render(accessoryBase(), a.id, { label: false, head: true })}</button>`,
   ).join("");
-  $("#charTabCharacter").setAttribute("aria-selected", String(lookTab === "character"));
-  $("#charTabAccessory").setAttribute("aria-selected", String(lookTab === "accessory"));
-  grid.hidden = lookTab !== "character";
-  accessories.hidden = lookTab !== "accessory";
+  const tabs = [
+    ["photo", "#photoGrid", "#charTabPhoto"],
+    ["character", "#charGrid", "#charTabCharacter"],
+    ["accessory", "#accessoryGrid", "#charTabAccessory"],
+  ];
+  for (const [name, panel, button] of tabs) {
+    $(button)?.setAttribute("aria-selected", String(lookTab === name));
+    $(panel).hidden = lookTab !== name;
+  }
   $("#charNote").textContent =
-    lookTab === "character"
-      ? "Your character shows on your own phone during the game."
-      : "Tap an accessory to wear it. “No accessory” is fine too.";
+    lookTab === "photo"
+      ? "Nineteen ready-made characters. Your choice shows on your own phone; the drawn ones can also wear a hat."
+      : lookTab === "character"
+        ? "The drawn characters. A hat or glasses comes from the Accessory tab."
+        : "Tap an accessory to wear it — that makes your character a drawn one. “No accessory” is fine too.";
 }
 function openLookPicker() {
   const picker = $("#charPicker");
@@ -2501,7 +2568,8 @@ function joinRoom() {
     code: $("#joinCodeInput").value.trim().toUpperCase(),
     name: $("#playerNameInput").value.trim(),
     character: look.character,
-    accessory: look.accessory,
+    // A picture is whole on its own; the server stores no accessory with it.
+    accessory: isPhotoLook(look.character) ? "none" : look.accessory,
   });
 }
 $("#joinPanel").onsubmit = (event) => {
@@ -2531,12 +2599,17 @@ document.addEventListener("click", (event) => {
   const character = event.target.closest("[data-character]");
   if (character) {
     look.character = character.dataset.character;
+    if (!isPhotoLook(look.character)) look.drawn = look.character;
     saveLook();
     renderLookPicker();
     return;
   }
   const accessory = event.target.closest("[data-accessory]");
   if (accessory) {
+    // Trying on a hat means playing as a drawn character: the tiles are drawn
+    // on one, so the look follows the tile the player just pressed.
+    look.character = accessoryBase();
+    look.drawn = look.character;
     look.accessory = accessory.dataset.accessory;
     saveLook();
     renderLookPicker();
@@ -2724,22 +2797,40 @@ function setGameStyle(phase) {
   $("#participantApp").dataset.phase = phase;
   scheduleLiveFit();
 }
+// The end of the night: three pedestals, the players' own characters standing
+// on them, and the score underneath. The taller the pedestal, the better the
+// night — the winner in the middle, where the whole room can see them.
+function podiumPlace(p) {
+  if (!p) return "";
+  const rank = Number(p.rank) || 0;
+  const figure = KCHARS
+    ? `<span class="podium-figure">${KCHARS.render(p.character, p.accessory)}</span>`
+    : "";
+  return `<div class="podium-place place-${rank}">
+      ${figure}
+      <div class="podium-block">
+        <span class="podium-badge" aria-hidden="true">${rank}</span>
+        <b class="podium-name">${e(p.name)}</b>
+        <span class="podium-score">${Number(p.score).toLocaleString()}<small> pts</small></span>
+      </div>
+    </div>`;
+}
 function podiumHTML(rows) {
   if (!rows.length) return "";
   const top = rows.slice(0, 3);
-  return `<div class="podium" aria-label="Top three players">${[
-    top[1],
-    top[0],
-    top[2],
-  ]
-    .filter(Boolean)
-    .map(
-      (p) =>
-        `<div class="podium-place place-${p.rank}"><b>${e(p.name)}</b><small>${Number(p.score).toLocaleString()} pts</small><strong>${p.rank}</strong></div>`,
-    )
-    .join(
-      "",
-    )}</div><div class="celebration" aria-hidden="true">✦ · ✧ · ★ · ✦ · ✧</div>`;
+  const others = rows.slice(3);
+  return `<div class="podium" aria-label="Final podium">
+      ${podiumPlace(top[1])}${podiumPlace(top[0])}${podiumPlace(top[2])}
+    </div>${
+      others.length
+        ? `<ol class="podium-rest">${others
+            .map(
+              (p) =>
+                `<li><b class="rank">${Number(p.rank)}</b><span>${e(p.name)}</span><strong>${Number(p.score).toLocaleString()} <small>pts</small></strong></li>`,
+            )
+            .join("")}</ol>`
+        : ""
+    }<div class="celebration" aria-hidden="true">✦ · ✧ · ★ · ✦ · ✧</div>`;
 }
 document.addEventListener("click", (event) => {
   if (!event.target.closest("[data-import]")) return;
@@ -3148,9 +3239,11 @@ function fitLiveScreen() {
   const optionSize = desktop ? (innerWidth >= 1600 ? 34 : 32) : 24;
   root.style.setProperty("--live-question", `${questionSize}px`);
   root.style.setProperty("--live-option", `${optionSize}px`);
+  // A picture starts generous and is only given up if the stage overflows — a
+  // wide drawing should reach the edges of the screen, not sit in the middle.
   const mediaSize = participantMode
-    ? 200
-    : Math.min(440, Math.max(200, innerHeight * 0.42));
+    ? 240
+    : Math.min(580, Math.max(220, innerHeight * 0.56));
   root.style.setProperty("--live-media", `${mediaSize}px`);
   root.style.setProperty("--live-gap", "14px");
   if (

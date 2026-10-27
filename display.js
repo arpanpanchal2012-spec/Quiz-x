@@ -34,20 +34,25 @@
   let revealKey = "";
   function fit() {
     const root = $("#displayStage");
-    root.style.setProperty(
-      "--display-question",
-      innerWidth >= 1600 ? "60px" : "48px",
-    );
-    root.style.setProperty(
-      "--display-answer",
-      innerWidth >= 1600 ? "36px" : "30px",
-    );
-    for (let i = 0; i <= 12; i++) {
+    const hasImage = !!$(".display-question.has-image .display-media img");
+    const questionBase = innerWidth >= 1600 ? 60 : 48;
+    const answerBase = innerWidth >= 1600 ? 36 : 30;
+    root.style.setProperty("--display-question", questionBase + "px");
+    root.style.setProperty("--display-answer", answerBase + "px");
+    const fits = () => root.scrollHeight <= root.clientHeight + 2;
+    if (hasImage) {
+      // The picture owns whatever room the question and the answers leave: it
+      // is laid out with flexbox, full width, and shrinks only if the text needs
+      // the space. The text keeps its readable size; no shrinking loop.
+      root.style.setProperty("--display-media", "80vh");
+      return;
+    }
+    for (let i = 0; i <= 20; i++) {
       root.style.setProperty(
         "--display-media",
-        Math.max(120, innerHeight * 0.38 - i * 24) + "px",
+        Math.max(120, innerHeight * 0.62 - i * 24) + "px",
       );
-      if (root.scrollHeight <= root.clientHeight + 2) return;
+      if (fits()) return;
     }
     root.style.setProperty("--display-question", "36px");
     root.style.setProperty("--display-answer", "28px");
@@ -67,8 +72,32 @@
       )
       .join("")}</div>`;
   }
+  // The last screen of the night: the top three on pedestals, their own
+  // characters standing on top, and a plain list for everyone below them.
+  function podium(rows) {
+    const place = (p) => {
+      if (!p) return "";
+      const rank = Number(p.rank) || 0;
+      const figure =
+        window.QuizzesCharacters && p.character
+          ? `<span class="display-podium-figure">${window.QuizzesCharacters.render(p.character, p.accessory)}</span>`
+          : "";
+      return `<div class="display-podium-place place-${rank}">${figure}<div class="display-podium-block"><span class="display-podium-badge">${rank}</span><b>${escape(p.name)}</b><span class="display-podium-score">${Number(p.score).toLocaleString()}</span></div></div>`;
+    };
+    const top = rows.slice(0, 3);
+    const rest = rows.slice(3);
+    return `<div class="display-podium" aria-label="Final podium">${place(top[1])}${place(top[0])}${place(top[2])}</div>${
+      rest.length
+        ? `<ol class="display-podium-rest">${rest.map((p) => `<li><b>${Number(p.rank)}</b><span>${escape(p.name)}</span><strong>${Number(p.score).toLocaleString()} <small>pts</small></strong></li>`).join("")}</ol>`
+        : ""
+    }`;
+  }
   function ranking() {
-    return `<div class="display-standings"><div class="eyebrow">${game.status === "ended" ? "FINAL RESULTS" : "LIVE STANDINGS"}</div><h1>${game.status === "ended" ? "Celebrate your winners" : "Leaderboard"}</h1>${rows.length ? `<ol>${rows.map((p) => `<li><b>${Number(p.rank)}</b><span>${escape(p.name)}</span><strong>${Number(p.score).toLocaleString()} <small>pts</small></strong></li>`).join("")}</ol>` : "<p>No participants yet.</p>"}</div>`;
+    if (game.status === "ended")
+      return `<div class="display-standings display-final"><div class="eyebrow">FINAL RESULTS</div>${
+        rows.length ? podium(rows) : "<p>No participants yet.</p>"
+      }</div>`;
+    return `<div class="display-standings"><div class="eyebrow">LIVE STANDINGS</div><h1>Leaderboard</h1>${rows.length ? `<ol>${rows.map((p) => `<li><b>${Number(p.rank)}</b><span>${escape(p.name)}</span><strong>${Number(p.score).toLocaleString()} <small>pts</small></strong></li>`).join("")}</ol>` : "<p>No participants yet.</p>"}</div>`;
   }
   function render() {
     if (!game) return;
@@ -89,7 +118,18 @@
     } else if (game.status === "lobby") {
       const join = new URL("/join", location.origin);
       join.searchParams.set("code", game.code);
-      stage.innerHTML = `<section class="projector-lobby"><div class="eyebrow">${game.status === "lobby" ? "YOUR SEAT IS WAITING" : "NEXT ROUND"}</div><h1>${escape(game.status === "lobby" ? game.title : game.upcomingRound)}</h1><p>Join with your phone. Enter your code and nickname together.</p><div class="projector-invite"><div id="displayQR" class="join-qr"></div><div><small>GAME CODE</small><strong>${escape(game.code)}</strong><p>${escape(join.origin + "/join")}</p></div></div><p class="muted">The host will start when ready.</p></section>`;
+      // Left: how to join, with the code and the QR. Middle: the quiz waiting to
+      // start. Right: who is already in the room, by nickname.
+      const seated = game.participants;
+      stage.innerHTML = `<section class="projector-lobby projector-room">
+        <div class="projector-join"><small>JOIN</small><div id="displayQR" class="join-qr"></div><span class="projector-join-label">GAME CODE</span><strong>${escape(game.code)}</strong><p>${escape(join.origin.replace(/^https?:\/\//, ""))}/join</p></div>
+        <div class="projector-room-centre"><div class="eyebrow">READY WHEN YOU ARE</div><h1>${escape(game.title)}</h1><p class="projector-room-count"><b>${seated.length}</b> ${seated.length === 1 ? "player" : "players"} in the room</p></div>
+        <div class="projector-people"><div class="eyebrow">PARTICIPANTS <b>${seated.length}</b></div>${
+          seated.length
+            ? `<ul>${seated.map((p) => `<li class="${p.connected ? "" : "is-away"}"><span>${escape(p.name)}</span></li>`).join("")}</ul>`
+            : '<p class="muted">Waiting for the first player.</p>'
+        }</div>
+      </section>`;
       const qr = qrcode(0, "M");
       qr.addData(join.href);
       qr.make();
@@ -99,7 +139,7 @@
       });
     } else if (game.status === "buzzer" && question) {
       const queue = buzzes || [];
-      stage.innerHTML = `<section class="display-question display-buzzer"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer">BUZZ</b></div><h1>${escape(question.text)}</h1><p class="display-instruction">${buzzOpen ? "Listen, then press BUZZ on your phone." : "Buzzing is closed."}</p><div class="display-buzzes">${queue.length ? `<ol>${queue.slice(0, 8).map((b) => `<li class="buzz-row buzz-${escape(b.status)}"><b class="buzz-pos">${b.position}</b><span class="buzz-name">${escape(b.name)}</span><span class="buzz-time">${(b.elapsedMs / 1000).toFixed(1)}s</span>${b.points ? `<span class="buzz-points">${b.points > 0 ? "+" : "−"}${Math.abs(b.points).toLocaleString()}</span>` : ""}</li>`).join("")}</ol>` : '<p class="muted">No one has buzzed in yet.</p>'}</div></section>`;
+      stage.innerHTML = `<section class="display-question display-buzzer"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer">${buzzOpen ? "BUZZ OPEN" : "BUZZ CLOSED"}</b></div><h1>${escape(question.text)}</h1><div class="display-buzzes">${queue.length ? `<ol>${queue.slice(0, 8).map((b) => `<li class="buzz-row buzz-${escape(b.status)}"><b class="buzz-pos">${b.position}</b><span class="buzz-name">${escape(b.name)}</span><span class="buzz-time">${(b.elapsedMs / 1000).toFixed(1)}s</span>${b.points ? `<span class="buzz-points">${b.points > 0 ? "+" : "−"}${Math.abs(b.points).toLocaleString()}</span>` : ""}</li>`).join("")}</ol>` : '<p class="muted">No one has buzzed in yet.</p>'}</div></section>`;
       tick();
     } else if (question) {
       // Two steps on the projector too: the question lands alone, then the
@@ -109,15 +149,32 @@
       const fresh = key !== revealKey;
       revealKey = key;
       const revealed = game.status === "results";
-      stage.innerHTML = `<section class="display-question"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer"></b></div><h1>${escape(question.text)}</h1><div class="display-media">${question.media && question.mediaType?.startsWith("image/") ? `<img loading="eager" fetchpriority="high" decoding="async" src="${escape(question.media)}" alt="Question image">` : question.media ? "<p>Audio question · Listen to the host.</p>" : ""}</div>${revealed ? answerColumns() : ""}<div class="display-options${fresh ? " reveal-answers" : ""}" style="--reveal-delay:${fresh ? "0.25s" : "0s"}">${optionsReady ? "" : '<p class="display-readout">The question is on screen. The answers appear next.</p>'}${(optionsReady ? question.options || [] : []).map((o, i) => {
+      // No instructions on the wall: the question, its picture across the full
+      // width, then the answers. The room knows what to do with a phone.
+      const image = question.media && question.mediaType?.startsWith("image/");
+      const audio = question.media && !image;
+      stage.innerHTML = `<section class="display-question${image ? " has-image" : ""}"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer"></b></div><h1>${escape(question.text)}</h1>${
+        image
+          ? `<div class="display-media"><img loading="eager" fetchpriority="high" decoding="async" src="${escape(question.media)}" alt="Question image"></div>`
+          : audio
+            ? `<div class="display-media is-audio" aria-hidden="true"></div>`
+            : ""
+      }${revealed ? answerColumns() : ""}<div class="display-options${fresh ? " reveal-answers" : ""}" style="--reveal-delay:${fresh ? "0.25s" : "0s"}">${(optionsReady ? question.options || [] : []).map((o, i) => {
         const right = revealed && result?.correctIndices?.includes(i);
         const mark = revealed ? `<span class="display-mark" aria-hidden="true">${right ? "✓" : "✗"}</span>` : "";
         return `<div class="display-option tile-${i} ${right ? "display-correct" : revealed ? "display-wrong" : ""}" style="--i:${i}"><span aria-hidden="true">${symbols[i]}</span><span class="display-option-copy">${escape(o)}</span>${mark}</div>`;
-      }).join("")}</div><p class="display-instruction">${!optionsReady ? "Listen to the question." : revealed ? "Correct answer: " + escape(result?.correct || "") : question.type === "multi" ? "Select all correct answers, then submit on your device." : question.type === "text" ? "Type your answer on your device." : "Choose your answer on your device."}</p></section>`;
+      }).join("")}</div>${
+        revealed && result?.correct
+          ? `<p class="display-answer-line"><span aria-hidden="true">✓</span> ${escape(result.correct)}</p>`
+          : ""
+      }</section>`;
       $(".display-media img")?.addEventListener("load", fit, { once: true });
+      if ($(".display-media img")?.complete) fit();
       tick();
     }
     requestAnimationFrame(fit);
+    if ($(".display-media img") && !$(".display-media img").complete)
+      setTimeout(fit, 400);
   }
   function tick() {
     const el = $("#displayTimer");
