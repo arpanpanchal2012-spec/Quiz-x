@@ -267,26 +267,25 @@ test("Host editor and a separate mobile player complete a saved multimedia quiz"
     page.getByRole("button", { name: "Results saved" }),
   ).toBeDisabled();
   await expect(page.locator("#hostQuestion")).toHaveText("Final leaderboard");
+  // The winners stand on the podium — the host's result screen shows the
+  // characters the players chose, not a plain list.
   await expect(page.locator("#hostResults .podium")).toBeVisible();
-  await expect(page.locator("#hostResults .leaderboard")).toContainText(
+  await expect(page.locator("#hostResults .podium")).toContainText(
     "Mobile player",
   );
-  expect(await page.locator("#hostResults .leaderboard").textContent()).toBe(
-    await player.locator("#playerResults .leaderboard").textContent(),
+  await expect(page.locator("#hostResults .podium-figure .kchar")).toHaveCount(
+    1,
+  );
+  // The phone shows the same result, with the player's own character on it.
+  await expect(player.locator("#playerResults .podium")).toContainText(
+    "Mobile player",
   );
   await expect(page.locator("#toggleLeaderboard")).toBeDisabled();
   expect(
-    await page
-      .locator("#hostResults .leaderboard li")
-      .first()
-      .evaluate(
-        (el) =>
-          el.getBoundingClientRect().bottom <=
-          document
-            .querySelector("#gameModal .stage-question")
-            .getBoundingClientRect().bottom +
-            2,
-      ),
+    await page.locator("#hostResults .podium").evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      return box.top >= 0 && box.bottom <= window.innerHeight + 2;
+    }),
   ).toBe(true);
   await page.screenshot({
     path: "test-artifacts/host-final-leaderboard.png",
@@ -1111,7 +1110,7 @@ test("Host editor and a separate mobile player complete a saved multimedia quiz"
   ).toBe("auto");
   await page.locator("#endGame").click();
   await expect(page.locator("#nextQuestion")).toBeDisabled();
-  await expect(page.locator("#hostResults .leaderboard")).toHaveCount(1);
+  await expect(page.locator("#hostResults .podium")).toHaveCount(1);
   // v0.8.1: delayed/failed images, snapshot isolation, DOM reuse and host-only grants.
   await page.locator("#closeGame").click();
   await page.setViewportSize({ width: 1366, height: 768 });

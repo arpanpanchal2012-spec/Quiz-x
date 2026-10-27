@@ -224,8 +224,10 @@ module.exports = async function professionalBrowser({ page, browser, errors }) {
   await phone.goto("/join?code=" + code);
   await phone.locator("#playerNameInput").fill("Professional phone test");
   await phone.locator("#joinGameBtn").click();
-  // rc.19: choose a character before entering the room.
+  // rc.19: choose a character before entering the room. rc.21 opens on the
+  // picture characters, so the drawn grid is one tab away.
   await phone.locator("#charPicker:not([hidden])").waitFor();
+  await phone.locator("#charTabCharacter").click();
   await phone.locator('#charGrid [data-character="fox"]').click();
   await phone.locator("#joinConfirm").click();
   await expect(phone.locator("#playerQuestion")).toBeVisible();
@@ -318,8 +320,9 @@ module.exports = async function professionalBrowser({ page, browser, errors }) {
   await expect(phone.locator("#textAnswerForm")).toBeVisible();
   await page.locator("#endGame").click();
   await expect(display.locator("#displayStage")).toContainText(
-    "Celebrate your winners",
+    "FINAL RESULTS",
   );
+  await expect(display.locator(".display-podium")).toBeVisible();
   await page.locator("#closeGame").click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(rehearsal.locator("#rehearsalPlayer")).toContainText(

@@ -308,6 +308,29 @@ test("every player is given a character of their own", { timeout: 60000 }, async
       for (const l of looks)
         assert.ok(l.accessory, "a seat came back without an accessory");
     });
+    await t.test("a picture character joins as itself", async () => {
+      const p = await socket();
+      sockets.push(p);
+      p.send("join_game", {
+        code,
+        name: "Player 10",
+        character: "photo:nova",
+        accessory: "crown",
+      });
+      const joined = await p.wait("joined");
+      const me = joined.game.participants.find((x) => x.id === joined.playerId);
+      assert.equal(me.character, "photo:nova");
+      // A picture is whole on its own, so a hat chosen with it is not worn.
+      assert.equal(me.accessory, "none");
+    });
+    await t.test("a picture nobody knows is replaced by a drawing", async () => {
+      const p = await socket();
+      p.send("join_game", { code, name: "Player 11", character: "photo:nope" });
+      const joined = await p.wait("joined");
+      const me = joined.game.participants.find((x) => x.id === joined.playerId);
+      assert.ok(me.character && me.character !== "photo:nope", me.character);
+      assert.ok(!me.character.includes(":"), me.character);
+    });
     await t.test("nonsense picks are replaced, never stored", async () => {
       const p = await socket();
       sockets.push(p);
@@ -384,7 +407,7 @@ test("every player is given a character of their own", { timeout: 60000 }, async
       const row = db.prepare("SELECT document FROM live_games WHERE code=?").get(code);
       assert.ok(row, "the room was not snapshotted");
       const doc = JSON.parse(row.document);
-      assert.equal(doc.players.length, 9);
+      assert.equal(doc.players.length, 11);
       for (const p of doc.players)
         assert.ok(p.character, `${p.name} has no saved character`);
       const owl = doc.players.find((p) => p.name === "Player 7");
