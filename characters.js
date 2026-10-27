@@ -378,6 +378,33 @@
       </g>`;
   }
 
+  // A player's own face on one of the drawn bodies. The photo is clipped to a
+  // circle where the head would be, so the figure keeps its arms, legs, bounce
+  // and hat — only the face is theirs. The phone rasterises this to a sprite and
+  // uploads that, so every other screen only ever handles a small image.
+  function faceSVG(characterId, accessoryId, faceUrl, options = {}) {
+    const c = byId(CHARACTERS, characterId);
+    const item = ITEMS[byId(ACCESSORIES, accessoryId).id] || ITEMS.none;
+    const id = `kf${++uid}`;
+    const clip = `kfc${++uid}`;
+    const label =
+      options.label === false
+        ? ""
+        : `${c.label} character wearing a player's face`;
+    const width = options.width || 240;
+    const height = Math.round((width * 200) / 120);
+    return `<svg class="kchar kchar-self" width="${width}" height="${height}" viewBox="0 0 120 200" role="img" aria-label="${label}" xmlns="http://www.w3.org/2000/svg">
+      <defs>${defsFor(id, c)}<clipPath id="${clip}"><circle cx="60" cy="58" r="46"/></clipPath></defs>
+      ${body(c, id)}
+      <g class="khead">
+        <circle cx="60" cy="58" r="47.5" fill="${c.fur}" />
+        <image href="${faceUrl}" x="14" y="12" width="92" height="92" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clip})" />
+        <circle cx="60" cy="58" r="46" fill="none" stroke="#ffffff" stroke-width="2.6" opacity=".7" />
+        <g class="kitem">${item(id)}</g>
+      </g>
+    </svg>`;
+  }
+
   function render(characterId, accessoryId, options = {}) {
     // A picture character: the sprite is the whole figure, so the accessory is
     // ignored and the same markup shape (a single .kchar element) comes back —
@@ -418,6 +445,7 @@
     photoOf,
     isPhoto: (id) => !!photoOf(id),
     render,
+    faceSVG,
     // A picture id has no accessory of its own, so it reports its own name.
     label: (id) => (photoOf(id) || byId(CHARACTERS, id)).label,
     // Every id a join may carry: twelve drawings and nineteen pictures.

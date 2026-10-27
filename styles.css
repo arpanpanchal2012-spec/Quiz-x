@@ -8570,3 +8570,341 @@ body:has(#gameModal.open) .toast {
   object-fit: contain;
   object-position: 50% 100%;
 }
+
+/* ===== rc.22 — a face of your own, and a little more show ================= */
+
+/* The join picker grows a "Your face" tile, a builder under the grid, and a
+   note that says where the body and the hat are chosen. */
+.char-preview[hidden] { display: none; }
+.face-tile {
+  border-style: dashed;
+  border-color: #c9bcf5;
+  background: #f3eeff;
+}
+.face-tile[aria-pressed="true"] {
+  border-style: solid;
+}
+.face-tile-art {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: clamp(48px, 11vh, 68px);
+  color: #6a56e8;
+  overflow: hidden;
+}
+.face-tile-art img.kchar-self {
+  height: 100%;
+  width: auto;
+}
+.face-builder {
+  margin: 10px 0 0;
+  padding: 12px;
+  border-radius: 16px;
+  background: #f6f2ff;
+  border: 1px solid #ded2ff;
+}
+.face-builder[hidden] { display: none; }
+.face-builder-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 15px;
+}
+.face-note {
+  margin: 6px 0 10px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: #5f5480;
+}
+.face-pick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff;
+  border: 2px solid #6a56e8;
+  color: #4b3bb5;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+}
+.face-stage {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  margin: 12px auto;
+  aspect-ratio: 1 / 1;
+  touch-action: none;
+  cursor: grab;
+}
+.face-stage[hidden] { display: none; }
+.face-stage canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 18px;
+  display: block;
+}
+/* The ring is where the head goes: what is inside it is what the room sees. */
+.face-guide {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 66%;
+  height: 66%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  box-shadow:
+    0 0 0 2px #6a56e8,
+    0 0 0 9999px rgb(20 12 40 / 0.35);
+  pointer-events: none;
+}
+#faceZoom {
+  width: 100%;
+  margin: 4px 0 10px;
+  accent-color: #6a56e8;
+}
+#faceUse { width: 100%; }
+
+/* A self portrait sits in the same slots as a drawing: tall, not square. */
+.kchar-holder.is-self { width: 104px; height: 174px; }
+.kchar img.kchar-self,
+img.kchar.kchar-self {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: 50% 100%;
+}
+.kchar-holder.kchar-hero img.kchar-self { width: 100%; height: 100%; }
+.podium-figure img.kchar-self,
+.display-podium-figure img.kchar-self {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: 50% 100%;
+}
+
+/* ===== rc.22 — the show: reactions, confetti, streaks, a round's colour ===== */
+
+/* Confetti is one canvas over everything, never in the way of a tap. */
+.confetti-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+}
+
+/* A short settle when the stage changes: opacity only, so nothing shifts. */
+.stage-in {
+  animation: stageSettle 0.26s ease-out both;
+}
+@keyframes stageSettle {
+  from { opacity: 0.35; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stage-in { animation: none; }
+}
+
+/* --- the phone's reaction to its own answer ------------------------------ */
+#playerQuestion.is-right #playerTitle {
+  animation: rightPop 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+#playerQuestion.is-wrong #playerTitle {
+  animation: wrongShake 0.5s ease-in-out both;
+}
+@keyframes rightPop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.06) rotate(-0.6deg); }
+  100% { transform: scale(1); }
+}
+@keyframes wrongShake {
+  0%, 100% { transform: translateX(0); }
+  18% { transform: translateX(-7px) rotate(-0.6deg); }
+  38% { transform: translateX(6px) rotate(0.5deg); }
+  58% { transform: translateX(-4px); }
+  78% { transform: translateX(3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #playerQuestion.is-right #playerTitle,
+  #playerQuestion.is-wrong #playerTitle { animation: none; }
+}
+
+/* The points just won, floating off the top of the card. */
+.points-float {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%);
+  font-size: 22px;
+  font-weight: 900;
+  color: #1c9a6c;
+  opacity: 0;
+  pointer-events: none;
+}
+.points-float.is-on {
+  animation: pointsFloat 1.5s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+@keyframes pointsFloat {
+  0% { opacity: 0; transform: translate(-50%, 10px) scale(0.9); }
+  22% { opacity: 1; transform: translate(-50%, -2px) scale(1.05); }
+  100% { opacity: 0; transform: translate(-50%, -46px) scale(1); }
+}
+
+/* A run of right answers. */
+.player-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 6px 0 0;
+  padding: 5px 11px 5px 9px;
+  border-radius: 999px;
+  background: #fff2e6;
+  border: 1px solid #ffd2ad;
+  color: #a24a12;
+  font-size: 12.5px;
+  font-weight: 800;
+}
+.player-streak[hidden] { display: none; }
+
+/* --- the podium --------------------------------------------------------- */
+.podium-crown {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - 6px);
+  transform: translateX(-50%);
+  filter: drop-shadow(0 3px 6px rgb(0 0 0 / 0.25));
+  animation: crownDrop 0.6s 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+@keyframes crownDrop {
+  from { opacity: 0; transform: translate(-50%, -18px) rotate(-8deg); }
+  to { opacity: 1; transform: translate(-50%, 0) rotate(0); }
+}
+.podium-figure { position: relative; }
+.podium.is-few {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 240px));
+  justify-content: center;
+}
+.display-podium.is-few {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 300px));
+  justify-content: center;
+}
+.display-podium-crown {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - 8px);
+  transform: translateX(-50%);
+  filter: drop-shadow(0 4px 8px rgb(0 0 0 / 0.3));
+  animation: crownDrop 0.7s 0.6s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+.display-podium-figure { position: relative; }
+@media (prefers-reduced-motion: reduce) {
+  .podium-crown, .display-podium-crown { animation: none; }
+}
+
+/* --- a colour for each round ------------------------------------------- */
+/* Only the stage edge and the round pill take it: the six answer colours are
+   the answers' own identity and never move. */
+#gameModal[data-tone="1"] { --tone: #9a5ee8; --tone-soft: #9a5ee822; }
+#gameModal[data-tone="2"] { --tone: #3ecb95; --tone-soft: #3ecb9522; }
+#gameModal[data-tone="3"] { --tone: #f6c542; --tone-soft: #f6c54222; }
+body[data-tone="1"] { --tone: #9a5ee8; }
+body[data-tone="2"] { --tone: #3ecb95; }
+body[data-tone="3"] { --tone: #f6c542; }
+#gameModal[data-phase="question"] .stage-question,
+#gameModal[data-phase="results"] .stage-question {
+  box-shadow:
+    inset 0 0 0 2px var(--tone-soft, transparent),
+    0 18px 40px #0d072440;
+}
+#playerQuestion #playerRound {
+  border-color: var(--tone, #9a5ee8);
+}
+.projector-page .projector-stage {
+  box-shadow: inset 0 0 140px var(--tone, transparent);
+}
+
+/* --- a floor shadow under the picture characters ------------------------ */
+.kchar-holder.is-photo {
+  position: relative;
+}
+.kchar-holder.is-photo::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 62%;
+  height: 10px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(28 12 60 / 0.28), transparent);
+  pointer-events: none;
+}
+
+/* The join card opens with the characters themselves. */
+.landing-strip {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 2px;
+  margin: -6px 0 10px;
+}
+.landing-strip img {
+  width: clamp(46px, 13vw, 66px);
+  height: auto;
+  animation: kPhotoBob 3.4s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.18s);
+  filter: drop-shadow(0 4px 7px rgb(38 20 74 / 0.22));
+}
+.landing-strip img:nth-child(2) { animation-delay: 0.18s; }
+.landing-strip img:nth-child(3) { animation-delay: 0.36s; }
+.landing-strip img:nth-child(4) { animation-delay: 0.54s; }
+.landing-strip img:nth-child(5) { animation-delay: 0.72s; }
+.landing-strip img:nth-child(6) { animation-delay: 0.9s; }
+@media (prefers-reduced-motion: reduce) {
+  .landing-strip img { animation: none; }
+}
+.brand-mark svg { display: block; }
+
+/* --- the clock, as a ring that drains ----------------------------------- */
+#playerTimer,
+#hostTimer {
+  --p: 1;
+  position: relative;
+  isolation: isolate;
+}
+/* The ring is a 3 px halo around the pill: a conic gradient, masked to its own
+   edge so only the rim is painted. */
+#playerTimer::before,
+#hostTimer::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 999px;
+  padding: 3px;
+  background: conic-gradient(
+    var(--ring, #7c5cff) calc(var(--p) * 1turn),
+    rgb(255 255 255 / 0.28) 0
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  z-index: -1;
+  transition: background 0.9s linear;
+}
+#playerTimer.timer-urgent::before,
+#hostTimer.timer-urgent::before {
+  --ring: #ff5c7a;
+}
+/* No clock, no ring. */
+#playerTimer[data-ring="off"]::before,
+#hostTimer[data-ring="off"]::before { display: none; }

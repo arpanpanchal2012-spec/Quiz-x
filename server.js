@@ -581,6 +581,60 @@ const server = http.createServer(async (req, res) => {
       );
     }
     if (await features.handle(req, res, p)) return;
+    // ---- a player's own face, for this room only ------------------------
+    // The phone composites the figure and uploads one small WebP. It is kept in
+    // the live room's memory — never in quizzes, attempts, reports or exports —
+    // and goes away with the room or when the player picks a listed character.
+    if (p === "/api/live-avatar" && req.method === "POST") {
+      const x = await data(req, 400 * 1024);
+      const g = games.get(String(x.code || "").toUpperCase());
+      if (!g) fail("Game not found. Check the code.", 404);
+      const seat = [...g.players.values()].find((q) => q.resumeToken === x.token);
+      if (!seat) fail("This player session has expired. Please join again.", 403);
+      const match = /^data:image\/(webp|png|jpeg);base64,([A-Za-z0-9+/=]+)$/.exec(
+        String(x.image || ""),
+      );
+      if (!match) fail("That picture could not be read.");
+      const buf = Buffer.from(match[2], "base64");
+      if (!buf.length || buf.length > 160 * 1024)
+        fail("That picture is too large. Try a smaller one.");
+      const rev = (seat.face?.rev || 0) + 1;
+      seat.face = { buf, type: "image/" + match[1], rev };
+      seat.character = `self:${seat.id}`;
+      seat.accessory = ACCESSORY_IDS.includes(seat.accessory) ? seat.accessory : "none";
+      broadcastRoster(g);
+      return json(res, 200, {
+        ok: true,
+        playerId: seat.id,
+        character: seat.character,
+        faceRev: rev,
+      });
+    }
+    if (p === "/api/live-avatar" && req.method === "DELETE") {
+      const x = await data(req, 4096);
+      const g = games.get(String(x.code || "").toUpperCase());
+      if (!g) fail("Game not found. Check the code.", 404);
+      const seat = [...g.players.values()].find((q) => q.resumeToken === x.token);
+      if (!seat) fail("This player session has expired. Please join again.", 403);
+      seat.face = null;
+      if (isSelfLook(seat.character, seat))
+        seat.character = characterFor({ ...seat, character: "" });
+      broadcastRoster(g);
+      return json(res, 200, { ok: true, character: seat.character });
+    }
+    const avatarPath = p.match(/^\/live-avatar\/([A-Z0-9]{4,12})\/([a-f0-9-]{8,40})\.webp$/i);
+    if (avatarPath && ["GET", "HEAD"].includes(req.method)) {
+      const g = games.get(avatarPath[1].toUpperCase());
+      const seat = g?.players.get(avatarPath[2]);
+      if (!seat?.face) return fail("Not found", 404);
+      res.writeHead(200, {
+        "Content-Type": seat.face.type,
+        // A face belongs to the room in progress, so no cache anywhere.
+        "Cache-Control": "no-store, max-age=0",
+        "X-Content-Type-Options": "nosniff",
+      });
+      return res.end(seat.face.buf);
+    }
     if (p.startsWith("/api/")) {
       const admin = await requireUser(req);
       if (await studio(req, res, p, admin)) return;
@@ -874,6 +928,7 @@ const server = http.createServer(async (req, res) => {
       "/styles.css": "styles.css",
       "/characters.css": "characters.css",
       "/characters.js": "characters.js",
+      "/celebrate.js": "celebrate.js",
       "/app.js": "app.js",
       "/quiz-sound.js": "quiz-sound.js",
     };
@@ -983,7 +1038,13 @@ function pickCharacter(g) {
 }
 // Rooms saved before characters existed still come back with one per player,
 // and it stays the same character on every later restore.
+function isSelfLook(id, p) {
+  return typeof id === "string" && id === `self:${p?.id}`;
+}
 function characterFor(p) {
+  // A player's own face: only valid for that seat, and only while the face is
+  // still in this room's memory.
+  if (isSelfLook(p?.character, p) && p.face) return p.character;
   if (characterOk(p?.character)) return p.character;
   let hash = 0;
   for (const c of String(p?.id || "")) hash = (hash * 31 + c.codePointAt(0)) % 1e6;
@@ -1030,6 +1091,7 @@ function ranking(g) {
       name: p.name,
       character: characterFor(p),
       accessory: accessoryFor(p),
+      faceRev: p.face?.rev || 0,
       score: p.score,
     }));
 }
@@ -1061,6 +1123,7 @@ function state(g) {
       accessory: accessoryFor(p),
       score: p.score,
       answered: p.answered,
+      faceRev: p.face?.rev || 0,
       connected: !!p.ws && p.ws.readyState === 1,
     })),
   };

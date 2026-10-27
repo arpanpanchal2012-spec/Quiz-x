@@ -500,11 +500,41 @@ const KCHARS = window.QuizzesCharacters || null;
 function isPhotoLook(id) {
   return !!KCHARS?.isPhoto?.(id);
 }
+// A player who put their own face on a character. The figure was composited on
+// their phone and lives in the room, so every screen loads it as one small
+// image — and falls back to a drawing if the room has gone.
+function isSelfLook(id) {
+  return typeof id === "string" && id.startsWith("self:");
+}
+function selfLookSrc(player) {
+  const id = String(player?.character || "").slice(5);
+  return `/live-avatar/${encodeURIComponent(game?.code || "")}/${encodeURIComponent(id)}.webp?r=${Number(player?.faceRev) || 0}`;
+}
+function figureHTML(player, options = {}) {
+  if (!KCHARS) return "";
+  if (isSelfLook(player?.character))
+    return `<img class="kchar kchar-self" src="${selfLookSrc(player)}" alt="${options.label === false ? "" : "Your character"}" width="240" height="400" decoding="async" draggable="false" />`;
+  return KCHARS.render(player?.character, player?.accessory, { thumb: !!options.thumb });
+}
 function characterSVG(player, className = "", options = {}) {
   if (!KCHARS) return "";
   const photo = isPhotoLook(player?.character) ? " is-photo" : "";
-  return `<span class="kchar-holder ${className}${photo}">${KCHARS.render(player?.character, player?.accessory, { thumb: !!options.thumb })}</span>`;
+  return `<span class="kchar-holder ${className}${photo}">${figureHTML(player, options)}</span>`;
 }
+// The room can forget a face (a restart, or the player changing it). The slot
+// then shows that player's drawn character rather than a broken image.
+document.addEventListener(
+  "error",
+  (event) => {
+    const img = event.target;
+    if (!img || img.tagName !== "IMG" || !img.classList.contains("kchar-self")) return;
+    const holder = img.closest(".kchar-holder") || img.parentElement;
+    if (!holder || !KCHARS) return;
+    holder.innerHTML = KCHARS.render(KCHARS.CHARACTER_IDS[0], "none");
+    holder.classList.remove("is-self");
+  },
+  true,
+);
 // A tiny copy for headers and lists on the player's own phone. The header chip
 // loads the 176 px sprite, not the full one.
 function characterChip(player, className = "kchar-chip") {
@@ -1589,8 +1619,11 @@ function handleMessage(m) {
       });
       $("#joinPanel").hidden = true;
       $("#playerQuestion").hidden = false;
+      resetFeedback();
       if (m.reclaimed)
         showToast("Welcome back — your score and place are restored.");
+      // A face made in the picker travels to the room once we are in it.
+      if (look.face && look.faceOn) sendFace();
     } else {
       if (m.hostToken)
         storeConnection({ code: game.code, hostToken: m.hostToken });
@@ -2037,11 +2070,69 @@ function lockAnswers() {
     "#playerOptions button, #textAnswerForm input, #textAnswerForm button",
   ).forEach((b) => (b.disabled = disabled));
 }
+// What the player actually sent, so the reveal can react to it. The right
+// answer only exists on the client once the reveal arrives.
+let lastAnswer = null;
+let lastScore = 0;
+let streak = 0;
+function resetFeedback() {
+  lastAnswer = null;
+  lastScore = 0;
+  streak = 0;
+  const pill = $("#playerStreak");
+  if (pill) pill.hidden = true;
+  const float = $("#pointsFloat");
+  if (float) float.textContent = "";
+}
+function wasRight(result) {
+  if (lastAnswer === null || lastAnswer === undefined) return false;
+  const correct = result?.correctIndices || [];
+  if (Array.isArray(lastAnswer))
+    return (
+      lastAnswer.length === correct.length &&
+      lastAnswer.every((i) => correct.includes(Number(i)))
+    );
+  if (typeof lastAnswer === "string") return false;
+  return correct.includes(Number(lastAnswer));
+}
+function floatPoints(delta) {
+  const box = $("#pointsFloat");
+  if (!box || !delta) return;
+  box.textContent = `+${delta.toLocaleString()}`;
+  box.classList.remove("is-on");
+  void box.offsetWidth;
+  box.classList.add("is-on");
+}
+function revealFeedback(result) {
+  if (!participantMode) return;
+  const mine = (result?.leaderboard || []).find((r) => r.id === myPlayerId);
+  const score = Number(mine?.score) || 0;
+  const delta = Math.max(0, score - lastScore);
+  lastScore = score;
+  const right = wasRight(result);
+  if (right) streak += 1;
+  else if (lastAnswer !== null && lastAnswer !== undefined) streak = 0;
+  floatPoints(delta);
+  const pill = $("#playerStreak");
+  const text = $("#playerStreakText");
+  if (pill && text) {
+    pill.hidden = streak < 2;
+    text.textContent = `${streak} in a row`;
+  }
+  const stage = $("#playerQuestion");
+  if (stage) {
+    stage.classList.remove("is-right", "is-wrong");
+    if (lastAnswer !== null && lastAnswer !== undefined)
+      stage.classList.add(right ? "is-right" : "is-wrong");
+  }
+  if (right) window.QuizzesCelebrate?.from($("#playerTitle"), 70);
+}
 function submitAnswer(answer, button) {
   if (locked || game?.status !== "question" || game?.optionsVisible === false)
     return;
   locked = true;
   answerPending = true;
+  lastAnswer = answer;
   lockAnswers();
   button?.classList.add("selected");
   $("#answerStatus").textContent = "Sending your answer…";
@@ -2109,6 +2200,7 @@ function renderResults(result) {
   sound.setPhase("results");
   setGameStyle("results");
   const prefix = participantMode ? "player" : "host";
+  toneFor(liveQuestion);
   $(`#${prefix}Hint`).textContent =
     (result?.roundEnded ? `${result.roundLabel} complete! · ` : "") +
     "Correct answer: " +
@@ -2177,6 +2269,9 @@ function renderResults(result) {
   $("#submitMulti").hidden = true;
   showLiveLeaderboard(!!result?.leaderboardVisible, result?.leaderboard || []);
   if (participantMode) {
+    // The reveal is the moment the phone reacts: a burst for a right answer, a
+    // shake for a wrong one, the points just won, and the run of rights.
+    revealFeedback(result);
     $("#textAnswerForm").hidden = true;
     locked = true;
     lockAnswers();
@@ -2227,6 +2322,12 @@ function renderEnded(rows) {
   // the same names are never printed twice.
   $(`#${prefix}Results`).innerHTML = podiumHTML(rows || []);
   if (!participantMode) {
+    // The podium is the moment of the night, so it gets a burst once the
+    // pedestals have risen.
+    setTimeout(() => {
+      if (game?.status === "ended")
+        window.QuizzesCelebrate?.from($("#hostResults .podium"), 140);
+    }, 900);
     $("#hostQuestion").textContent = "Final leaderboard";
     $("#hostHint").textContent =
       "Announce your winners! Results have been saved in Reports.";
@@ -2305,10 +2406,19 @@ setInterval(() => {
     ? Math.max(0, Math.ceil((game.deadline - Date.now() - offset) / 1000))
     : 0;
   sound.remaining(remaining);
-  $(participantMode ? "#playerTimer" : "#hostTimer").classList.toggle(
-    "timer-urgent",
-    counting && remaining <= 5,
-  );
+  const timer = $(participantMode ? "#playerTimer" : "#hostTimer");
+  timer.classList.toggle("timer-urgent", counting && remaining <= 5);
+  // The pill carries a ring that drains with the clock, so how much time is left
+  // is legible from across a room, not just as a number.
+  const total = Number(liveQuestion?.seconds) || 0;
+  if (counting && total > 0) {
+    timer.style.setProperty("--p", String(remaining / total));
+    delete timer.dataset.ring;
+  } else {
+    timer.style.removeProperty("--p");
+    // No clock running: no ring, just the pill.
+    timer.dataset.ring = "off";
+  }
   const text = counting
     ? remaining + "s"
     : ["lobby", "round_intro", "last_question_intro"].includes(game.status) ||
@@ -2490,7 +2600,25 @@ function storedLook() {
     return { character: firstPicture(), accessory: "none", drawn: fallback, fresh: true };
   }
 }
+// A face the player made in this session. It is deliberately NOT in
+// localStorage: it lives in sessionStorage only, so closing the tab drops it,
+// and on the server it lives in the live room and nowhere else.
+const FACE_STORE = "quizzes.face.v1";
+function storedFace() {
+  try {
+    const value = sessionStorage.getItem(FACE_STORE);
+    return value && value.startsWith("data:image/") ? value : "";
+  } catch {
+    return "";
+  }
+}
 let look = storedLook();
+look.face = storedFace();
+// Whether the face is the look right now, and the crop it was built from, so a
+// hat can be added afterwards without asking for the photo again.
+look.faceOn = !!look.face;
+let faceCrop = "";
+if (look.faceOn) lookTab = "photo";
 // A returning player lands on the tab of the look they had; a new one starts on
 // the pictures, which is what they came to pick from.
 let lookTab = look.fresh || isPhotoLook(look.character) ? "photo" : "character";
@@ -2512,13 +2640,19 @@ function renderLookPicker() {
   const accessories = $("#accessoryGrid");
   const preview = $("#charPreview");
   if (!photoGrid || !grid || !accessories || !preview || !KCHARS) return;
-  preview.innerHTML = characterSVG(look, "kchar-hero is-idle");
+  preview.innerHTML = look.face && look.faceOn
+    ? `<span class="kchar-holder kchar-hero"><img class="kchar kchar-self" src="${look.face}" alt="Your character" width="240" height="400" /></span>`
+    : characterSVG(look, "kchar-hero is-idle");
   photoGrid.innerHTML = KCHARS.PHOTO_CHARACTERS.map(
     (c) => {
       const id = "photo:" + c.id;
-      return `<button type="button" class="kchar-tile photo-tile" data-character="${id}" aria-pressed="${id === look.character}">${KCHARS.render(id, "none", { label: false, thumb: true })}<span>${e(c.label)}</span></button>`;
+      return `<button type="button" class="kchar-tile photo-tile" data-character="${id}" aria-pressed="${!look.faceOn && id === look.character}">${KCHARS.render(id, "none", { label: false, thumb: true })}<span>${e(c.label)}</span></button>`;
     },
-  ).join("");
+  ).join("") +
+    `<button type="button" class="kchar-tile face-tile" data-face-open aria-pressed="${!!look.faceOn}">
+      <span class="face-tile-art" aria-hidden="true">${look.face && look.faceOn ? `<img class="kchar kchar-self" src="${look.face}" alt="" width="240" height="400" />` : '<svg viewBox="0 0 48 48" width="34" height="34"><circle cx="24" cy="18" r="8" fill="none" stroke="currentColor" stroke-width="3"/><path d="M8 42c2-9 8-13 16-13s14 4 16 13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>'}</span>
+      <span>Your face</span>
+    </button>`;
   grid.innerHTML = KCHARS.CHARACTERS.map(
     (c) =>
       `<button type="button" class="kchar-tile" data-character="${c.id}" aria-pressed="${c.id === look.character}">${KCHARS.render(c.id, "none", { label: false })}<span>${e(c.label)}</span></button>`,
@@ -2536,6 +2670,8 @@ function renderLookPicker() {
     $(button)?.setAttribute("aria-selected", String(lookTab === name));
     $(panel).hidden = lookTab !== name;
   }
+  const bodyName = $("#faceBodyName");
+  if (bodyName) bodyName.textContent = KCHARS.label(accessoryBase());
   $("#charNote").textContent =
     lookTab === "photo"
       ? "Nineteen ready-made characters. Your choice shows on your own phone; the drawn ones can also wear a hat."
@@ -2596,9 +2732,14 @@ document.addEventListener("click", (event) => {
     renderLookPicker();
     return;
   }
+  if (event.target.closest("[data-face-open]")) {
+    openFaceBuilder();
+    return;
+  }
   const character = event.target.closest("[data-character]");
   if (character) {
     look.character = character.dataset.character;
+    look.faceOn = false;
     if (!isPhotoLook(look.character)) look.drawn = look.character;
     saveLook();
     renderLookPicker();
@@ -2612,8 +2753,199 @@ document.addEventListener("click", (event) => {
     look.drawn = look.character;
     look.accessory = accessory.dataset.accessory;
     saveLook();
+    // The hat is part of the composite, so a face is rebuilt with it.
+    if (look.faceOn && faceCrop) {
+      composeFace(faceCrop).then((sprite) => {
+        if (!sprite) return;
+        look.face = sprite;
+        try {
+          sessionStorage.setItem(FACE_STORE, sprite);
+        } catch {
+          /* private mode */
+        }
+        renderLookPicker();
+        if (game?.code) sendFace();
+      });
+    }
     renderLookPicker();
   }
+});
+// ---- your own face ---------------------------------------------------------
+// Everything happens on the phone: the photo is cropped, composited onto a
+// drawn body with characters.js, and only the finished 240 × 400 figure is sent
+// to the room. The raw photo never leaves the device.
+function storedConnection() {
+  try {
+    return JSON.parse(sessionStorage.getItem(resumeKey) || "null") || null;
+  } catch {
+    return null;
+  }
+}
+async function sendFace() {
+  const saved = storedConnection();
+  if (!look.face || !game?.code || !saved?.playerToken) return;
+  try {
+    const res = await fetch("/api/live-avatar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: game.code,
+        token: saved.playerToken,
+        image: look.face,
+      }),
+    });
+    if (!res.ok) return;
+    const out = await res.json();
+    if (out?.character && myPlayerId) {
+      const me = game?.participants?.find((p) => p.id === myPlayerId);
+      if (me) {
+        me.character = out.character;
+        me.faceRev = out.faceRev;
+      }
+    }
+  } catch {
+    /* the drawn character stands in until the room accepts the picture */
+  }
+}
+const faceState = { img: null, zoom: 1, x: 0, y: 0, drag: null };
+function faceCanvas() {
+  return $("#faceCanvas");
+}
+function drawFaceStage() {
+  const canvas = faceCanvas();
+  const img = faceState.img;
+  if (!canvas || !img) return;
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = "#efe9ff";
+  ctx.fillRect(0, 0, w, h);
+  const cover = Math.max(w / img.width, h / img.height);
+  const scale = cover * faceState.zoom;
+  const dw = img.width * scale;
+  const dh = img.height * scale;
+  const x = (w - dw) / 2 + faceState.x;
+  const y = (h - dh) / 2 + faceState.y;
+  ctx.drawImage(img, x, y, dw, dh);
+}
+function openFacePhoto(file) {
+  if (!file || !file.type.startsWith("image/")) return;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    URL.revokeObjectURL(url);
+    faceState.img = img;
+    faceState.zoom = 1;
+    faceState.x = 0;
+    faceState.y = 0;
+    $("#faceStage").hidden = false;
+    $("#faceZoom").hidden = false;
+    $("#faceUse").hidden = false;
+    $("#faceZoom").value = "100";
+    drawFaceStage();
+  };
+  img.src = url;
+}
+// The crop is what the player sees in the circle: a square from the middle of
+// the zoomed photo, cut down to 256 px so the sprite stays small.
+function cropFace() {
+  const canvas = faceCanvas();
+  const img = faceState.img;
+  if (!canvas || !img) return "";
+  const size = 256;
+  const out = document.createElement("canvas");
+  out.width = size;
+  out.height = size;
+  const ctx = out.getContext("2d");
+  const cover = Math.max(canvas.width / img.width, canvas.height / img.height);
+  const scale = (cover * faceState.zoom * size) / canvas.width;
+  const dw = img.width * scale;
+  const dh = img.height * scale;
+  const x = (size - dw) / 2 + (faceState.x * size) / canvas.width;
+  const y = (size - dh) / 2 + (faceState.y * size) / canvas.height;
+  ctx.drawImage(img, x, y, dw, dh);
+  return out.toDataURL("image/webp", 0.9).startsWith("data:image/webp")
+    ? out.toDataURL("image/webp", 0.9)
+    : out.toDataURL("image/png");
+}
+// Compose the whole figure — body, own face, chosen hat — into one sprite.
+function composeFace(faceData) {
+  return new Promise((resolve) => {
+    const svg = KCHARS.faceSVG(
+      isPhotoLook(look.drawn) ? KCHARS.CHARACTER_IDS[0] : look.drawn,
+      look.accessory,
+      faceData,
+      { width: 240, label: false },
+    );
+    const blob = new Blob([svg], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 240;
+      canvas.height = 400;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, 240, 400);
+      URL.revokeObjectURL(url);
+      const webp = canvas.toDataURL("image/webp", 0.86);
+      resolve(webp.startsWith("data:image/webp") ? webp : canvas.toDataURL("image/png"));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve("");
+    };
+    img.src = url;
+  });
+}
+function useFace() {
+  const cropped = cropFace();
+  if (!cropped) return;
+  faceCrop = cropped;
+  composeFace(cropped).then((sprite) => {
+    if (!sprite) return;
+    look.face = sprite;
+    look.faceOn = true;
+    try {
+      sessionStorage.setItem(FACE_STORE, sprite);
+    } catch {
+      /* private mode: the face still holds for this game */
+    }
+    $("#faceBuilder").hidden = true;
+    renderLookPicker();
+    $("#charNote").textContent =
+      "Your face is on the character you picked. Tap Join game to take it in.";
+    if (game?.code) sendFace();
+  });
+}
+function openFaceBuilder() {
+  $("#faceBuilder").hidden = false;
+  $("#charPreview").hidden = true;
+  $("#faceBuilder").scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+$("#faceInput").onchange = (event) => openFacePhoto(event.target.files?.[0]);
+$("#faceZoom").oninput = (event) => {
+  faceState.zoom = Number(event.target.value) / 100;
+  drawFaceStage();
+};
+$("#faceUse").onclick = () => useFace();
+$("#faceClose").onclick = () => {
+  $("#faceBuilder").hidden = true;
+  $("#charPreview").hidden = false;
+  renderLookPicker();
+};
+$("#faceStage").addEventListener("pointerdown", (event) => {
+  faceState.drag = { x: event.clientX, y: event.clientY, ox: faceState.x, oy: faceState.y };
+  event.target.setPointerCapture?.(event.pointerId);
+});
+$("#faceStage").addEventListener("pointermove", (event) => {
+  if (!faceState.drag) return;
+  faceState.x = faceState.drag.ox + (event.clientX - faceState.drag.x);
+  faceState.y = faceState.drag.oy + (event.clientY - faceState.drag.y);
+  drawFaceStage();
+});
+$("#faceStage").addEventListener("pointerup", () => {
+  faceState.drag = null;
 });
 $("#leavePlayer").onclick = () => {
   if (
@@ -2788,6 +3120,16 @@ $("#backupForm").onsubmit = async (event) => {
   }
 };
 
+// Each round gets its own accent so a three-round night reads as three acts.
+// It tints the stage edge and the round pill — never the answer colours, which
+// belong to the answers and must not move.
+function toneFor(question) {
+  const tone = String(((Number(question?.roundIndex) || 0) % 3) + 1);
+  const modal = $("#gameModal");
+  const player = $("#participantApp");
+  if (modal) modal.dataset.tone = tone;
+  if (player) player.dataset.tone = tone;
+}
 function setGameStyle(phase) {
   if (["lobby", "round_intro", "last_question_intro", "ended"].includes(phase))
     currentHostImageKey = null;
@@ -2795,6 +3137,14 @@ function setGameStyle(phase) {
   else updateHostImageStatus();
   $("#gameModal").dataset.phase = phase;
   $("#participantApp").dataset.phase = phase;
+  // Replay the entrance: question, reveal and end each settle in rather than
+  // snapping. opacity only, so nothing moves under the pointer.
+  for (const node of [$(".stage-question"), $("#playerQuestion")]) {
+    if (!node) continue;
+    node.classList.remove("stage-in");
+    void node.offsetWidth;
+    node.classList.add("stage-in");
+  }
   scheduleLiveFit();
 }
 // The end of the night: three pedestals, the players' own characters standing
@@ -2803,8 +3153,12 @@ function setGameStyle(phase) {
 function podiumPlace(p) {
   if (!p) return "";
   const rank = Number(p.rank) || 0;
+  const crown =
+    rank === 1
+      ? '<span class="podium-crown" aria-hidden="true"><svg viewBox="0 0 48 32" width="34" height="22"><path d="M4 30 2 8l12 8 10-14 10 14 12-8-2 22z" fill="#f6c542" stroke="#b8860b" stroke-width="2" stroke-linejoin="round"/></svg></span>'
+      : "";
   const figure = KCHARS
-    ? `<span class="podium-figure">${KCHARS.render(p.character, p.accessory)}</span>`
+    ? `<span class="podium-figure">${crown}${figureHTML(p)}</span>`
     : "";
   return `<div class="podium-place place-${rank}">
       ${figure}
@@ -2819,8 +3173,16 @@ function podiumHTML(rows) {
   if (!rows.length) return "";
   const top = rows.slice(0, 3);
   const others = rows.slice(3);
-  return `<div class="podium" aria-label="Final podium">
-      ${podiumPlace(top[1])}${podiumPlace(top[0])}${podiumPlace(top[2])}
+  // With one or two players there is no empty pedestal to stand on: the places
+  // that exist are the places shown, centred.
+  const places =
+    top.length === 1
+      ? podiumPlace(top[0])
+      : top.length === 2
+        ? `${podiumPlace(top[1])}${podiumPlace(top[0])}`
+        : `${podiumPlace(top[1])}${podiumPlace(top[0])}${podiumPlace(top[2])}`;
+  return `<div class="podium${top.length < 3 ? " is-few" : ""}" data-count="${top.length}" aria-label="Final podium">
+      ${places}
     </div>${
       others.length
         ? `<ol class="podium-rest">${others

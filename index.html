@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#513293" />
     <title>Quizzes · Live learning, together</title>
-    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.21" />
-    <link rel="stylesheet" href="/characters.css?v=0.9.0-rc.21" />
+    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.22" />
+    <link rel="stylesheet" href="/characters.css?v=0.9.0-rc.22" />
   </head>
   <body>
     <div class="app-shell" id="hostApp">
       <aside class="sidebar">
         <div class="brand">
-          <div class="brand-mark">Q</div>
+          <div class="brand-mark"><svg viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><circle cx="24" cy="23" r="11" fill="none" stroke="#fff" stroke-width="4.5"/><path d="M29 31l6 7" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><circle cx="35" cy="12" r="3.4" fill="#f6c542"/></svg></div>
           <div><strong>Quizzes</strong><span>BETTER TOGETHER</span></div>
         </div>
         <nav class="nav" aria-label="Main navigation">
@@ -45,7 +45,7 @@
       <main class="main-content">
         <header class="topbar">
           <div class="mobile-brand">
-            <div class="brand-mark">Q</div>
+            <div class="brand-mark"><svg viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><circle cx="24" cy="23" r="11" fill="none" stroke="#fff" stroke-width="4.5"/><path d="M29 31l6 7" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><circle cx="35" cy="12" r="3.4" fill="#f6c542"/></svg></div>
             <strong>Quizzes</strong>
           </div>
           <div class="top-actions">
@@ -999,11 +999,19 @@
       <div class="participant-shell">
         <header class="participant-header">
           <a href="/" class="player-logo"
-            ><span class="brand-mark">Q</span><b>Quizzes</b></a
+            ><span class="brand-mark"><svg viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><circle cx="24" cy="23" r="11" fill="none" stroke="#fff" stroke-width="4.5"/><path d="M29 31l6 7" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><circle cx="35" cy="12" r="3.4" fill="#f6c542"/></svg></span><b>Quizzes</b></a
           ><span class="pill">PLAY TOGETHER</span>
         </header>
         <main class="participant-card">
           <form id="joinPanel">
+            <div class="landing-strip" aria-hidden="true">
+              <img src="/characters/ph-sparkle-thumb.webp" alt="" width="176" height="176" />
+              <img src="/characters/ph-nova-thumb.webp" alt="" width="176" height="176" />
+              <img src="/characters/ph-pixel-thumb.webp" alt="" width="176" height="176" />
+              <img src="/characters/ph-samurai-thumb.webp" alt="" width="176" height="176" />
+              <img src="/characters/ph-viking-thumb.webp" alt="" width="176" height="176" />
+              <img src="/characters/ph-kitty-thumb.webp" alt="" width="176" height="176" />
+            </div>
             <div class="eyebrow">YOUR SEAT IS WAITING</div>
             <h1>Join a game</h1>
             <p class="muted">
@@ -1088,6 +1096,43 @@
                 aria-label="Choose an accessory"
                 hidden
               ></div>
+              <div class="face-builder" id="faceBuilder" hidden>
+                <div class="face-builder-head">
+                  <b>Your own face</b>
+                  <button type="button" class="text-btn" id="faceClose">Cancel</button>
+                </div>
+                <p class="face-note">
+                  Take a photo or choose one, then line your face up in the ring.
+                  It is shown in this game only — never saved with a quiz.
+                </p>
+                <label class="face-pick" for="faceInput">
+                  <svg viewBox="0 0 48 48" width="22" height="22" aria-hidden="true"><path d="M6 16h6l3-5h18l3 5h6v24H6z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><circle cx="24" cy="27" r="7.5" fill="none" stroke="currentColor" stroke-width="3"/></svg>
+                  Take or choose a photo
+                </label>
+                <input type="file" id="faceInput" accept="image/*" capture="user" hidden />
+                <div class="face-stage" id="faceStage" hidden>
+                  <canvas id="faceCanvas" width="300" height="300"></canvas>
+                  <span class="face-guide" aria-hidden="true"></span>
+                </div>
+                <input
+                  type="range"
+                  id="faceZoom"
+                  min="100"
+                  max="260"
+                  value="100"
+                  step="2"
+                  hidden
+                  aria-label="Zoom the photo"
+                />
+                <button type="button" class="primary-btn" id="faceUse" hidden>
+                  Use this face
+                </button>
+                <p class="face-note">
+                  Your face is drawn on the
+                  <b id="faceBodyName">Bear</b> body. Change the body in the
+                  Drawn tab, the hat in Accessory.
+                </p>
+              </div>
               <div class="char-actions">
                 <button type="button" class="text-btn" id="charBack">← Back</button>
                 <button type="button" class="primary-btn" id="joinConfirm">
@@ -1122,6 +1167,11 @@
             </div>
             <h2 id="playerTitle">You’re in!</h2>
             <p class="muted" id="playerHint">Waiting for your host to start.</p>
+            <p class="player-streak" id="playerStreak" hidden>
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 2c1.8 3.1.6 4.6-.2 6.1-.8 1.4-1.1 2.9.5 4.4 1.2 1.1 2.6.4 2.9-1 .3-1.3-.2-2.4-.2-2.4s3.4 2 3.4 6.1c0 3.6-2.9 6.8-6.4 6.8S5.6 19 5.6 15.4C5.6 9.8 12 8.3 12 2z" fill="#f2703a"/></svg>
+              <b id="playerStreakText">2 in a row</b>
+            </p>
+            <div id="pointsFloat" class="points-float" aria-hidden="true"></div>
             <div id="playerMedia"></div>
             <div class="player-answers" id="playerOptions"></div>
             <p class="answer-summary" id="playerAnswerSummary" hidden></p>
@@ -1370,11 +1420,12 @@ Answer: together</pre
       </p>
       <div id="draftRecoveryList"></div>
     </dialog>
-    <script src="/qr-code.js?v=0.9.0-rc.21"></script>
-    <script src="/quiz-sound.js?v=0.9.0-rc.21"></script>
-    <script src="/characters.js?v=0.9.0-rc.21"></script>
-    <script src="/app.js?v=0.9.0-rc.21"></script>
-    <script src="/extensions.js?v=0.9.0-rc.21"></script>
-    <script src="/professional.js?v=0.9.0-rc.21"></script>
+    <script src="/qr-code.js?v=0.9.0-rc.22"></script>
+    <script src="/quiz-sound.js?v=0.9.0-rc.22"></script>
+    <script src="/characters.js?v=0.9.0-rc.22"></script>
+    <script src="/celebrate.js?v=0.9.0-rc.22"></script>
+    <script src="/app.js?v=0.9.0-rc.22"></script>
+    <script src="/extensions.js?v=0.9.0-rc.22"></script>
+    <script src="/professional.js?v=0.9.0-rc.22"></script>
   </body>
 </html>

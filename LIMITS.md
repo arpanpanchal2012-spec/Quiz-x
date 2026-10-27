@@ -21,6 +21,7 @@ variable on the hosting dashboard, without touching code.
 | Round name | 100 characters | no |
 | Timer per question | 5–120 seconds | no |
 | Timer, round buttons | 10, 15, 20, 30, 35, 40, 45, 60, 90, 120 seconds | no |
+| A player's own face | One per player per room: 240 × 400 WebP/PNG, up to 160 KB, held in the live room's memory and dropped when the room ends or the player changes look. Never written to a quiz, attempt, report or export | no |
 | Characters | 31 looks: 19 picture characters (your own artwork, 512 px WebP + 176 px thumb) and 12 drawn characters × 14 accessories = 168 drawn looks | no |
 | Where characters appear | The player's own phone only — the host screen and the projector never show a face | no |
 | Answer reveal | 1.5 s after the question on host/projector, 0.15 s on a phone | no |

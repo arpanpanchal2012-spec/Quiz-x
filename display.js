@@ -78,15 +78,31 @@
     const place = (p) => {
       if (!p) return "";
       const rank = Number(p.rank) || 0;
-      const figure =
-        window.QuizzesCharacters && p.character
-          ? `<span class="display-podium-figure">${window.QuizzesCharacters.render(p.character, p.accessory)}</span>`
+      // A player's own face is composited on their phone and lives in this
+      // room, so it arrives as one small image rather than a drawing.
+      const self =
+        typeof p.character === "string" && p.character.startsWith("self:");
+      const crown =
+        rank === 1
+          ? '<span class="display-podium-crown" aria-hidden="true"><svg viewBox="0 0 48 32" width="40" height="26"><path d="M4 30 2 8l12 8 10-14 10 14 12-8-2 22z" fill="#f6c542" stroke="#b8860b" stroke-width="2" stroke-linejoin="round"/></svg></span>'
+          : "";
+      const figure = self
+        ? `<span class="display-podium-figure">${crown}<img class="kchar kchar-self" src="/live-avatar/${encodeURIComponent(game?.code || "")}/${encodeURIComponent(String(p.character).slice(5))}.webp?r=${Number(p.faceRev) || 0}" alt="" /></span>`
+        : window.QuizzesCharacters && p.character
+          ? `<span class="display-podium-figure">${crown}${window.QuizzesCharacters.render(p.character, p.accessory)}</span>`
           : "";
       return `<div class="display-podium-place place-${rank}">${figure}<div class="display-podium-block"><span class="display-podium-badge">${rank}</span><b>${escape(p.name)}</b><span class="display-podium-score">${Number(p.score).toLocaleString()}</span></div></div>`;
     };
     const top = rows.slice(0, 3);
     const rest = rows.slice(3);
-    return `<div class="display-podium" aria-label="Final podium">${place(top[1])}${place(top[0])}${place(top[2])}</div>${
+    // One or two players: only the places that exist, centred on the wall.
+    const places =
+      top.length === 1
+        ? place(top[0])
+        : top.length === 2
+          ? `${place(top[1])}${place(top[0])}`
+          : `${place(top[1])}${place(top[0])}${place(top[2])}`;
+    return `<div class="display-podium${top.length < 3 ? " is-few" : ""}" data-count="${top.length}" aria-label="Final podium">${places}</div>${
       rest.length
         ? `<ol class="display-podium-rest">${rest.map((p) => `<li><b>${Number(p.rank)}</b><span>${escape(p.name)}</span><strong>${Number(p.score).toLocaleString()} <small>pts</small></strong></li>`).join("")}</ol>`
         : ""
@@ -99,8 +115,22 @@
       }</div>`;
     return `<div class="display-standings"><div class="eyebrow">LIVE STANDINGS</div><h1>Leaderboard</h1>${rows.length ? `<ol>${rows.map((p) => `<li><b>${Number(p.rank)}</b><span>${escape(p.name)}</span><strong>${Number(p.score).toLocaleString()} <small>pts</small></strong></li>`).join("")}</ol>` : "<p>No participants yet.</p>"}</div>`;
   }
+  let cheered = false;
   function render() {
     if (!game) return;
+    // The wall celebrates the podium once, when it first appears.
+    if (game.status === "ended") {
+      if (!cheered) {
+        cheered = true;
+        setTimeout(() => {
+          if (game?.status === "ended")
+            window.QuizzesCelebrate?.from($(".display-podium"), 180);
+        }, 800);
+      }
+    } else cheered = false;
+    // Each round carries its own accent on the wall too.
+    if (question)
+      document.body.dataset.tone = String(((Number(question.roundIndex) || 0) % 3) + 1);
     $("#displayTitle").textContent = game.title;
     $("#displayCode").textContent = "Join · " + game.code;
     $("#displayCount").textContent =
