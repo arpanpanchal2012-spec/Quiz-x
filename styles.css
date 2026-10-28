@@ -8530,7 +8530,9 @@ body:has(#gameModal.open) .toast {
 .photo-tile {
   padding: 4px 3px 3px;
 }
-.photo-tile img.kchar {
+/* The grid is 24 stills; only the big preview above it moves, so the tiles stay
+   still and a phone is not animating two dozen figures while it scrolls. */
+.photo-tile img.kchar { animation: none;
   height: clamp(48px, 11vh, 68px);
   width: auto;
   max-width: 100%;
@@ -8544,24 +8546,26 @@ body:has(#gameModal.open) .toast {
 
 /* The figure slots. A drawing is tall and narrow; a picture is a square, so it
    is centred in the same slot at the largest size that fits. */
+/* rc.24: a 3D character is a standing figure, not a square picture, so its
+   slots are portrait — the same height as before, less width. */
 .kchar-holder.is-photo {
-  width: 96px;
-  height: 96px;
+  width: 70px;
+  height: 108px;
   display: inline-flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
 }
 .kchar-holder.kchar-hero.is-photo {
-  width: clamp(96px, 21vh, 132px);
-  height: clamp(96px, 21vh, 132px);
+  width: clamp(72px, 15vh, 100px);
+  height: clamp(120px, 26vh, 172px);
 }
 .player-chip .kchar-holder.is-photo {
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 32px;
 }
 .player-identity .kchar-holder.kchar-hero.is-photo {
-  width: 104px;
-  height: 104px;
+  width: 82px;
+  height: 128px;
 }
 /* On a pedestal the winner stands taller than the runners-up, exactly as a
    drawing does — only the height changes, never the square. */
@@ -8925,6 +8929,10 @@ body[data-tone="3"] { --tone: #f6c542; }
 }
 .join-chip .join-figure .kchar-holder,
 .join-chip .join-figure .kchar { width: 100%; height: 100%; }
+/* rc.24: a 3D figure in a chip is 40 pixels tall; the drop shadow that suits
+   the big slots only muddies the chip, so it is dropped here. */
+.join-chip .join-figure .kchar-photo,
+.projector-figure .kchar-photo { filter: none; }
 /* A small hello now and then, staggered so the wall is a crowd and not a
    chorus line. */
 .join-chip .kchar-holder.react-wave .karm-r {

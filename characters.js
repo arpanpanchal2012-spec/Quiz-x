@@ -54,12 +54,11 @@
     { id: "bowtie", label: "Bow tie" },
   ];
 
-  // The nineteen ready-made characters, supplied as pictures. They are not
-  // drawn in this file: each one is a WebP sprite in characters/, named the same
-  // as its id. A picture character carries the `photo:` prefix so its id can
-  // never collide with a drawn one, and so a phone running an older release —
-  // which only knows how to draw — falls back to a drawing instead of a hole.
-  // A picture cannot wear a drawn hat, so a picture look has no accessory.
+  // The ready-made characters: glossy 3D renders, not drawings. Each one is
+  // cut into a head and a body in design-lab/twin-3d/build-rig.py, so the head
+  // can turn at the neck and the figure can hop, lean and sway. The sprite ids
+  // are the same as the old picture cast, so a look saved on a phone last week
+  // still names a character the app knows.
   const PHOTO_CHARACTERS = [
     { id: "sparkle", label: "Sparkle" },
     { id: "nova", label: "Nova" },
@@ -80,6 +79,11 @@
     { id: "grove", label: "Grove" },
     { id: "blossom", label: "Blossom" },
     { id: "sprout", label: "Sprout" },
+    { id: "max", label: "Max" },
+    { id: "ace", label: "Ace" },
+    { id: "scientist", label: "Professor" },
+    { id: "rockstar", label: "Riff" },
+    { id: "grandpa", label: "Grandpa" },
   ];
   const PHOTO_PREFIX = "photo:";
   const PHOTO_IDS = PHOTO_CHARACTERS.map((c) => PHOTO_PREFIX + c.id);
@@ -87,6 +91,35 @@
     typeof id === "string" && id.startsWith(PHOTO_PREFIX)
       ? PHOTO_CHARACTERS.find((p) => p.id === id.slice(PHOTO_PREFIX.length)) || null
       : null;
+
+  // --------------------------------------------------------------- 3D rigs
+  // characters3d.gen.js carries the numbers: canvas size, the neck point the
+  // head turns about, and the box each trimmed layer occupies on that canvas.
+  const RIGS = (typeof window !== "undefined" && window.QUIZZES_RIGS) || {};
+
+  // A rig is one <svg> with two <image> layers, so it scales into any slot the
+  // way a drawing does — no letterboxing, no fixed pixel size. The body layer
+  // keeps the jaw, so a turned head never uncovers a hole in the neck.
+  function rigSVG(photo, options) {
+    const r = RIGS[photo.id];
+    const label = options.label === false ? "" : `${photo.label} character`;
+    if (!r)
+      return `<img class="kchar kchar-photo" src="/assets/3d/${photo.id}-thumb.webp" alt="${label}" decoding="async" draggable="false" />`;
+    const [nx, ny] = r.neck;
+    const [hx, hy, hw, hh] = r.head;
+    const [bx, by, bw, bh] = r.body;
+    // Every figure breathes on its own clock, so a lobby never moves in unison.
+    const beat = `${(Math.random() * 2.4).toFixed(2)}s`;
+    const look = `${(Math.random() * 4).toFixed(2)}s`;
+    return `<span class="kchar kchar-rig" style="--beat:${beat};--lookBeat:${look}">
+      <svg class="krig" viewBox="0 0 ${r.w} ${r.h}" preserveAspectRatio="xMidYMax meet" role="img" aria-label="${label}" xmlns="http://www.w3.org/2000/svg">
+        <image class="krig-body" href="/assets/3d/${photo.id}-body.webp" x="${bx}" y="${by}" width="${bw}" height="${bh}" preserveAspectRatio="none" ${options.extra || ""} />
+        <g class="khead krig-head" style="transform-origin:${(nx * r.w).toFixed(1)}px ${(ny * r.h).toFixed(1)}px">
+          <image class="krig-face" href="/assets/3d/${photo.id}-head.webp" x="${hx}" y="${hy}" width="${hw}" height="${hh}" preserveAspectRatio="none" />
+        </g>
+      </svg>
+    </span>`;
+  }
 
   const CHARACTER_IDS = CHARACTERS.map((c) => c.id);
   const ACCESSORY_IDS = ACCESSORIES.map((a) => a.id);
@@ -420,8 +453,11 @@
     // every screen that positions a figure keeps working untouched.
     const photo = photoOf(characterId);
     if (photo) {
-      const size = options.thumb ? "-thumb" : "";
-      return `<img class="kchar kchar-photo${options.thumb ? " is-thumb" : ""}" src="/characters/ph-${photo.id}${size}.webp" alt="${options.label === false ? "" : `${photo.label} character`}" width="${options.thumb ? 176 : 512}" height="${options.thumb ? 176 : 512}" decoding="async" draggable="false" ${options.extra || ""} />`;
+      // A tile in the picker is 60 pixels tall; the rig there would be two
+      // images for no gain, so the tile takes the single flat thumbnail.
+      if (options.thumb && RIGS[photo.id])
+        return `<img class="kchar kchar-photo is-thumb" src="/assets/3d/${photo.id}-thumb.webp" alt="${options.label === false ? "" : `${photo.label} character`}" decoding="async" draggable="false" ${options.extra || ""} />`;
+      return rigSVG(photo, options);
     }
     const c = byId(CHARACTERS, characterId);
     const item = ITEMS[byId(ACCESSORIES, accessoryId).id] || ITEMS.none;
@@ -457,15 +493,22 @@
     PHOTO_IDS,
     photoOf,
     isPhoto: (id) => !!photoOf(id),
+    rigOf: (id) => {
+      const photo = photoOf(id);
+      return photo ? RIGS[photo.id] || null : null;
+    },
     render,
     faceSVG,
     // A picture id has no accessory of its own, so it reports its own name.
     label: (id) => (photoOf(id) || byId(CHARACTERS, id)).label,
-    // Every id a join may carry: twelve drawings and nineteen pictures.
+    // Every id a join may carry: twelve drawings and the 3D cast.
     lookIds: () => [...PHOTO_IDS, ...CHARACTER_IDS],
     accessoryLabel: (id) => byId(ACCESSORIES, id).label,
-    // The room hands out the next unused character, so a lobby is a crowd.
+    // The room hands out the next unused character, so a lobby is a crowd. The
+    // 3D cast comes first: it is the only one the picker offers now.
     pick: (used = []) => {
+      const freePhoto = PHOTO_IDS.filter((c) => !used.includes(c));
+      if (freePhoto.length) return freePhoto[Math.floor(Math.random() * freePhoto.length)];
       const free = CHARACTER_IDS.filter((c) => !used.includes(c));
       const pool = free.length ? free : CHARACTER_IDS;
       return pool[Math.floor(Math.random() * pool.length)];

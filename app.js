@@ -2706,10 +2706,9 @@ look.face = storedFace();
 // hat can be added afterwards without asking for the photo again.
 look.faceOn = !!look.face;
 let faceCrop = "";
-if (look.faceOn) lookTab = "photo";
-// A returning player lands on the tab of the look they had; a new one starts on
-// the pictures, which is what they came to pick from.
-let lookTab = look.fresh || isPhotoLook(look.character) ? "photo" : "character";
+// rc.24: there is one panel of characters, so the tab is always the same one.
+// It stays a variable because the face builder and the tiles still speak of it.
+let lookTab = "photo";
 // Which drawn character the accessory tiles are drawn on.
 function accessoryBase() {
   if (!isPhotoLook(look.character)) return look.character;
@@ -2741,31 +2740,20 @@ function renderLookPicker() {
       <span class="face-tile-art" aria-hidden="true">${look.face && look.faceOn ? `<img class="kchar kchar-self" src="${look.face}" alt="" width="240" height="400" />` : '<svg viewBox="0 0 48 48" width="34" height="34"><circle cx="24" cy="18" r="8" fill="none" stroke="currentColor" stroke-width="3"/><path d="M8 42c2-9 8-13 16-13s14 4 16 13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>'}</span>
       <span>Your face</span>
     </button>`;
-  grid.innerHTML = KCHARS.CHARACTERS.map(
-    (c) =>
-      `<button type="button" class="kchar-tile" data-character="${c.id}" aria-pressed="${c.id === look.character}">${KCHARS.render(c.id, "none", { label: false })}<span>${e(c.label)}</span></button>`,
-  ).join("");
-  accessories.innerHTML = KCHARS.ACCESSORIES.map(
-    (a) =>
-      `<button type="button" class="accessory-tile" data-accessory="${a.id}" aria-pressed="${a.id === look.accessory && !isPhotoLook(look.character)}" aria-label="${e(a.label)}" title="${e(a.label)}">${KCHARS.render(accessoryBase(), a.id, { label: false, head: true })}</button>`,
-  ).join("");
-  const tabs = [
-    ["photo", "#photoGrid", "#charTabPhoto"],
-    ["character", "#charGrid", "#charTabCharacter"],
-    ["accessory", "#accessoryGrid", "#charTabAccessory"],
-  ];
-  for (const [name, panel, button] of tabs) {
-    $(button)?.setAttribute("aria-selected", String(lookTab === name));
-    $(panel).hidden = lookTab !== name;
-  }
+  // rc.24: the cast is the only thing to pick. The drawn figures and their
+  // accessories are gone from the picker — every character now arrives dressed
+  // and moves on its own, so there is nothing left to wear.
+  grid.innerHTML = "";
+  accessories.innerHTML = "";
+  grid.hidden = true;
+  accessories.hidden = true;
+  const tabs = $("#charTabs");
+  if (tabs) tabs.hidden = true;
+  photoGrid.hidden = false;
   const bodyName = $("#faceBodyName");
   if (bodyName) bodyName.textContent = KCHARS.label(accessoryBase());
   $("#charNote").textContent =
-    lookTab === "photo"
-      ? "Nineteen ready-made characters. Your choice shows on your own phone; the drawn ones can also wear a hat."
-      : lookTab === "character"
-        ? "The drawn characters. A hat or glasses comes from the Accessory tab."
-        : "Tap an accessory to wear it — that makes your character a drawn one. “No accessory” is fine too.";
+    "Twenty-four characters. Tap one — it is who you play as, and it moves on your phone all night.";
 }
 function openLookPicker() {
   const picker = $("#charPicker");

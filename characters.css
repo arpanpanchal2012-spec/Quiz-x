@@ -566,3 +566,232 @@
     animation: none !important;
   }
 }
+
+/* ===== rc.24 — the 3D cast ===============================================
+   Each character is a painted render cut into two layers. The whole figure is
+   one <svg>, so it scales into any slot; the body layer carries the jaw and the
+   head layer turns about a pivot the build script measured on the picture. That
+   gives a real head turn, a real nod, and a body that can hop, lean and spin —
+   without a single frame of extra artwork.
+   ======================================================================== */
+
+.kchar.kchar-rig {
+  display: block;
+  width: 100%;
+  height: 100%;
+  line-height: 0;
+  filter: drop-shadow(0 6px 10px rgb(38 20 74 / 0.26));
+}
+.kchar-rig .krig {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transform-origin: 50% 100%;
+  will-change: transform;
+  animation: kRigIdle 4.8s ease-in-out infinite;
+  animation-delay: var(--beat, 0s);
+}
+.kchar-rig .krig-body,
+.kchar-rig .krig-face {
+  pointer-events: none;
+  user-select: none;
+}
+/* The neck pivot is written per figure, in canvas pixels, so the head turns
+   where its own neck is rather than where a generic one would be. */
+.kchar-rig .khead {
+  transform-box: view-box;
+  animation: kRigLook 7.5s ease-in-out infinite;
+  animation-delay: var(--lookBeat, 0s);
+  will-change: transform;
+}
+/* The lobby and the player's own card carry `is-idle` on the holder. */
+.kchar-holder.is-idle .kchar-rig .krig,
+.kchar-rig.is-idle .krig {
+  animation-duration: 3.2s;
+}
+
+/* --- idle: breathing, and a head that looks around ---------------------- */
+@keyframes kRigIdle {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  32% { transform: translateY(-1.4%) scale(0.995, 1.012); }
+  64% { transform: translateY(0) scale(1.004, 0.996); }
+}
+@keyframes kRigLook {
+  0%, 100% { transform: rotate(0deg); }
+  18% { transform: rotate(-2.4deg); }
+  46% { transform: rotate(1.9deg); }
+  70% { transform: rotate(-0.8deg); }
+  86% { transform: rotate(0.6deg); }
+}
+
+/* --- the reaction vocabulary -------------------------------------------- */
+@keyframes kRigHop {
+  0% { transform: translateY(0) scale(1, 1); }
+  18% { transform: translateY(0) scale(1.06, 0.9); }
+  42% { transform: translateY(-13%) scale(0.96, 1.06); }
+  62% { transform: translateY(0) scale(1.05, 0.94); }
+  78% { transform: translateY(-4%) scale(1, 1.01); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+@keyframes kRigPop {
+  0% { transform: scale(1, 1); }
+  35% { transform: scale(0.94, 1.07) translateY(-6%); }
+  70% { transform: scale(1.03, 0.97); }
+  100% { transform: scale(1, 1); }
+}
+@keyframes kRigDroop {
+  0% { transform: translateY(0) rotate(0) scale(1); }
+  32% { transform: translateY(4%) rotate(-3.4deg) scale(0.955, 0.98); }
+  62% { transform: translateY(3%) rotate(2.2deg) scale(0.965, 0.975); }
+  100% { transform: translateY(0) rotate(0) scale(1); }
+}
+@keyframes kRigSpin {
+  0% { transform: translateY(0) rotate(0) scale(1); }
+  15% { transform: translateY(0) rotate(0) scale(1.05, 0.92); }
+  55% { transform: translateY(-14%) rotate(190deg) scale(0.98, 1.03); }
+  80% { transform: translateY(-4%) rotate(352deg) scale(1.02, 0.98); }
+  100% { transform: translateY(0) rotate(360deg) scale(1); }
+}
+@keyframes kRigClap {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  30% { transform: translateY(1%) scale(1.045, 0.94); }
+  60% { transform: translateY(0) scale(0.97, 1.03); }
+}
+@keyframes kRigBounce {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  35% { transform: translateY(-9%) scale(0.97, 1.04); }
+  70% { transform: translateY(0) scale(1.04, 0.95); }
+}
+@keyframes kRigLead {
+  0% { transform: translateY(0) rotate(0); }
+  22% { transform: translateY(0) rotate(0) scale(1.06, 0.9); }
+  50% { transform: translateY(-18%) rotate(-4deg); }
+  72% { transform: translateY(0) rotate(1.5deg) scale(1.05, 0.94); }
+  100% { transform: translateY(0) rotate(0); }
+}
+@keyframes kRigRush {
+  0%, 100% { transform: translateX(0) scale(1, 1); }
+  25% { transform: translateX(-1.4%) scale(1, 1.015); }
+  50% { transform: translateX(1.4%) scale(1, 0.99); }
+  75% { transform: translateX(-0.8%) scale(1, 1.01); }
+}
+@keyframes kRigSway {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  25% { transform: rotate(-3.2deg) translateY(-2%); }
+  75% { transform: rotate(3.2deg) translateY(-2%); }
+}
+@keyframes kRigBuzz {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  20% { transform: translateX(-3%) rotate(-2deg); }
+  40% { transform: translateX(3%) rotate(2deg); }
+  60% { transform: translateX(-2.5%) rotate(-1.6deg); }
+  80% { transform: translateX(2.5%) rotate(1.6deg); }
+}
+
+/* --- what the head does on its own -------------------------------------- */
+@keyframes kRigNod {
+  0%, 100% { transform: rotate(0deg); }
+  30% { transform: rotate(4.5deg); }
+  65% { transform: rotate(-2deg); }
+}
+@keyframes kRigNo {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-7deg); }
+  45% { transform: rotate(7deg); }
+  70% { transform: rotate(-5deg); }
+}
+@keyframes kRigBob {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  35% { transform: rotate(2.5deg) translateY(-1.5%); }
+  70% { transform: rotate(-1.5deg) translateY(0); }
+}
+@keyframes kRigCheer {
+  0% { transform: rotate(0deg); }
+  30% { transform: rotate(-6deg); }
+  60% { transform: rotate(6deg); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes kRigWobble {
+  0%, 100% { transform: rotate(-1.5deg); }
+  50% { transform: rotate(1.5deg); }
+}
+@keyframes kRigSwayHead {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(4deg); }
+  75% { transform: rotate(-4deg); }
+}
+
+.kchar-holder.react-correct .kchar-rig .krig,
+.podium-figure.react-correct .kchar-rig .krig,
+.display-podium-figure.react-correct .kchar-rig .krig { animation: kRigHop 1.05s cubic-bezier(.3,.9,.4,1) 2 both; }
+.kchar-holder.react-correct .kchar-rig .khead,
+.podium-figure.react-correct .kchar-rig .khead,
+.display-podium-figure.react-correct .kchar-rig .khead { animation: kRigNod 0.52s ease-in-out 4 both; }
+.kchar-holder.react-wrong .kchar-rig .krig,
+.podium-figure.react-wrong .kchar-rig .krig,
+.display-podium-figure.react-wrong .kchar-rig .krig { animation: kRigDroop 1.7s ease-out both; }
+.kchar-holder.react-wrong .kchar-rig .khead,
+.podium-figure.react-wrong .kchar-rig .khead,
+.display-podium-figure.react-wrong .kchar-rig .khead { animation: kRigNo 0.6s ease-in-out 3 both; }
+.kchar-holder.react-win .kchar-rig .krig,
+.podium-figure.react-win .kchar-rig .krig,
+.display-podium-figure.react-win .kchar-rig .krig { animation: kRigSpin 1.7s cubic-bezier(.3,.8,.3,1) 0.2s both; }
+.kchar-holder.react-win .kchar-rig .khead,
+.podium-figure.react-win .kchar-rig .khead,
+.display-podium-figure.react-win .kchar-rig .khead { animation: kRigCheer 1.7s ease-in-out both; }
+.kchar-holder.react-clap .kchar-rig .krig,
+.podium-figure.react-clap .kchar-rig .krig,
+.display-podium-figure.react-clap .kchar-rig .krig { animation: kRigClap 1.05s ease-in-out infinite; }
+.kchar-holder.react-clap .kchar-rig .khead,
+.podium-figure.react-clap .kchar-rig .khead,
+.display-podium-figure.react-clap .kchar-rig .khead { animation: kRigBob 0.35s ease-in-out infinite; }
+.kchar-holder.react-streak .kchar-rig .krig,
+.podium-figure.react-streak .kchar-rig .krig,
+.display-podium-figure.react-streak .kchar-rig .krig { animation: kRigBounce 0.44s cubic-bezier(.3,.9,.4,1) 6 both; }
+.kchar-holder.react-streak .kchar-rig .khead,
+.podium-figure.react-streak .kchar-rig .khead,
+.display-podium-figure.react-streak .kchar-rig .khead { animation: kRigNod 0.44s ease-in-out 6 both; }
+.kchar-holder.react-lead .kchar-rig .krig,
+.podium-figure.react-lead .kchar-rig .krig,
+.display-podium-figure.react-lead .kchar-rig .krig { animation: kRigLead 1.2s cubic-bezier(.3,.9,.4,1) both; }
+.kchar-holder.react-lead .kchar-rig .khead,
+.podium-figure.react-lead .kchar-rig .khead,
+.display-podium-figure.react-lead .kchar-rig .khead { animation: kRigCheer 1.2s ease-in-out both; }
+.kchar-holder.react-rush .kchar-rig .krig,
+.podium-figure.react-rush .kchar-rig .krig,
+.display-podium-figure.react-rush .kchar-rig .krig { animation: kRigRush 0.4s ease-in-out infinite; }
+.kchar-holder.react-rush .kchar-rig .khead,
+.podium-figure.react-rush .kchar-rig .khead,
+.display-podium-figure.react-rush .kchar-rig .khead { animation: kRigWobble 0.4s ease-in-out infinite; }
+.kchar-holder.react-wave .kchar-rig .krig,
+.podium-figure.react-wave .kchar-rig .krig,
+.display-podium-figure.react-wave .kchar-rig .krig { animation: kRigSway 2.8s ease-in-out infinite; }
+.kchar-holder.react-wave .kchar-rig .khead,
+.podium-figure.react-wave .kchar-rig .khead,
+.display-podium-figure.react-wave .kchar-rig .khead { animation: kRigSwayHead 2.8s ease-in-out infinite; }
+.kchar-holder.react-buzz .kchar-rig .krig,
+.podium-figure.react-buzz .kchar-rig .krig,
+.display-podium-figure.react-buzz .kchar-rig .krig { animation: kRigBuzz 0.5s ease-in-out 3 both; }
+.kchar-holder.react-buzz .kchar-rig .khead,
+.podium-figure.react-buzz .kchar-rig .khead,
+.display-podium-figure.react-buzz .kchar-rig .khead { animation: kRigNo 0.25s ease-in-out 6 both; }
+.kchar-holder.react-accept .kchar-rig .krig,
+.podium-figure.react-accept .kchar-rig .krig,
+.display-podium-figure.react-accept .kchar-rig .krig { animation: kRigPop 0.8s cubic-bezier(.3,.9,.4,1) both; }
+.kchar-holder.react-accept .kchar-rig .khead,
+.podium-figure.react-accept .kchar-rig .khead,
+.display-podium-figure.react-accept .kchar-rig .khead { animation: kRigNod 0.4s ease-in-out 2 both; }
+.kchar-holder.react-reject .kchar-rig .krig,
+.podium-figure.react-reject .kchar-rig .krig,
+.display-podium-figure.react-reject .kchar-rig .krig { animation: kRigDroop 1.2s ease-out both; }
+.kchar-holder.react-reject .kchar-rig .khead,
+.podium-figure.react-reject .kchar-rig .khead,
+.display-podium-figure.react-reject .kchar-rig .khead { animation: kRigNo 0.5s ease-in-out 3 both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kchar-rig .krig,
+  .kchar-rig .khead {
+    animation: none !important;
+  }
+}

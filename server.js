@@ -897,15 +897,18 @@ const server = http.createServer(async (req, res) => {
       if (!m || !(await features.mediaAccess(req, id))) fail("Not found", 404);
       return await mediaStore.serve(req, res, id, m.mime);
     }
-    // The picture characters. A fixed name pattern and a directory join that
-    // cannot climb out of characters/ — nothing else is reachable here.
-    if (p.startsWith("/characters/")) {
-      const sprite = p.slice(12);
-      if (!/^ph-[a-z]+(-thumb)?\.webp$/.test(sprite)) return fail("Not found", 404);
-      const file = path.join(__dirname, "characters", sprite);
+    // The 3D characters. Two layers per figure plus a flat thumbnail, all named
+    // after the character. A fixed name pattern and a directory join that cannot
+    // climb out of assets/3d — nothing else is reachable here.
+    if (p.startsWith("/assets/3d/")) {
+      const sprite = p.slice(11);
+      if (!/^[a-z]+-(head|body|thumb)\.webp$/.test(sprite)) return fail("Not found", 404);
+      const file = path.join(__dirname, "assets", "3d", sprite);
       if (!fs.existsSync(file)) return fail("Not found", 404);
       res.writeHead(200, {
         "Content-Type": "image/webp",
+        // The layer for a character never changes name, so a long cache is safe
+        // and the picker is instant on the second visit.
         "Cache-Control": "public, max-age=604800",
         "X-Content-Type-Options": "nosniff",
       });
@@ -928,6 +931,7 @@ const server = http.createServer(async (req, res) => {
       "/styles.css": "styles.css",
       "/characters.css": "characters.css",
       "/characters.js": "characters.js",
+      "/characters3d.gen.js": "characters3d.gen.js",
       "/celebrate.js": "celebrate.js",
       "/app.js": "app.js",
       "/quiz-sound.js": "quiz-sound.js",
@@ -1010,14 +1014,15 @@ const CHARACTER_IDS = [
   "bear", "cat", "fox", "bunny", "panda", "frog",
   "penguin", "owl", "tiger", "wolf", "unicorn", "monster",
 ];
-// The nineteen picture characters. They travel as `photo:<id>`, which no drawn
-// id can ever be, so a phone on an older release keeps drawing a figure instead
-// of showing nothing. A picture cannot wear a drawn accessory.
+// The 3D cast. They travel as `photo:<id>`, which no drawn id can ever be, so a
+// phone on an older release keeps drawing a figure instead of showing nothing.
+// A render arrives fully dressed, so it never wears a drawn accessory.
 const PHOTO_CHARACTER_IDS = [
   "photo:sparkle", "photo:nova", "photo:pixel", "photo:ruby", "photo:royal",
   "photo:rocky", "photo:kitty", "photo:dino", "photo:unicorn", "photo:wizard",
   "photo:hero", "photo:samurai", "photo:chef", "photo:alien", "photo:viking",
   "photo:pirate", "photo:grove", "photo:blossom", "photo:sprout",
+  "photo:max", "photo:ace", "photo:scientist", "photo:rockstar", "photo:grandpa",
 ];
 const LOOK_IDS = [...CHARACTER_IDS, ...PHOTO_CHARACTER_IDS];
 const isPhoto = (id) => PHOTO_CHARACTER_IDS.includes(id);
@@ -1032,6 +1037,9 @@ const ACCESSORY_IDS = [
 // player, from the picker.
 function pickCharacter(g) {
   const used = new Set([...(g?.players?.values() || [])].map((p) => p.character));
+  // The 3D cast is what the picker offers, so it is what a seat falls back to.
+  const freePhoto = PHOTO_CHARACTER_IDS.filter((c) => !used.has(c));
+  if (freePhoto.length) return freePhoto[crypto.randomInt(freePhoto.length)];
   const free = CHARACTER_IDS.filter((c) => !used.has(c));
   const pool = free.length ? free : CHARACTER_IDS;
   return pool[crypto.randomInt(pool.length)];
