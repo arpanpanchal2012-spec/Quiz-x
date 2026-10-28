@@ -79,7 +79,8 @@
   .kchar .karm,
   .kchar .kfoot,
   .kchar .khead,
-  .kchar .kpupil {
+  .kchar .kpupil,
+  .kchar-rig .kcheer {
     animation: none;
   }
 }
@@ -231,6 +232,64 @@
   animation:
     kBlinkNow var(--blinkCycle, 7s) linear infinite var(--blink, 0s),
     kWink 17s ease-in-out infinite;
+}
+
+/* --- the cheer pose ------------------------------------------------------ */
+/* A second render of the same figure with both hands up. It is hidden while a
+   character is idle, and when a reaction plays it takes the place of the head
+   and the body outright: the hands move because the whole figure changes pose,
+   not because a hand slides out of a sleeve that never let go of it. */
+.kchar-rig .krig {
+  overflow: visible;
+}
+.kchar-rig .kcheer {
+  opacity: 0;
+  transition: opacity 90ms linear;
+  overflow: visible;
+}
+:is(.kchar-holder, .podium-figure, .display-podium-figure):is(
+    .react-correct,
+    .react-win,
+    .react-clap,
+    .react-streak,
+    .react-lead,
+    .react-buzz,
+    .react-accept
+  )
+  .kcheer {
+  opacity: 1;
+  animation: kCheerBob 0.6s ease-in-out infinite;
+  animation-delay: var(--beat, 0s);
+}
+:is(.kchar-holder, .podium-figure, .display-podium-figure):is(
+    .react-correct,
+    .react-win,
+    .react-clap,
+    .react-streak,
+    .react-lead,
+    .react-buzz,
+    .react-accept
+  )
+  :is(.krig-head, .krig-body) {
+  opacity: 0;
+}
+/* A win is a jump on the spot while the figure spins, so the hands stay up
+   instead of merely turning round once. */
+.podium-figure.react-win .kcheer,
+.display-podium-figure.react-win .kcheer,
+.kchar-holder.react-win .kcheer {
+  animation: kCheerJump 0.9s cubic-bezier(0.3, 0.9, 0.4, 1) 0.35s infinite;
+}
+@keyframes kCheerBob {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  30% { transform: translateY(-2.5%) scale(0.99, 1.01); }
+  60% { transform: translateY(0.5%) scale(1.01, 0.99); }
+}
+@keyframes kCheerJump {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  18% { transform: translateY(2.5%) scale(1.03, 0.97); }
+  42% { transform: translateY(-11%) scale(0.97, 1.03); }
+  62% { transform: translateY(0) scale(1.02, 0.98); }
 }
 
 /* --- what a reaction does to a drawn figure ----------------------------- */
@@ -625,6 +684,30 @@
   86% { transform: rotate(0.6deg); }
 }
 
+/* --- the arms ------------------------------------------------------------ */
+/* Where the render left daylight between arm and body, the arm is its own
+   layer and turns about its shoulder. Where it did not, there is no arm layer
+   and the shoulders carry the movement instead — no figure is ever left with a
+   hole where an arm used to be. */
+.kchar-rig .karm {
+  transform-box: view-box;
+  animation: kArmSwing 3.6s ease-in-out infinite;
+  animation-delay: var(--swingBeat, 0s);
+  will-change: transform;
+}
+.kchar-rig .krig-arm-r {
+  animation-name: kArmSwingR;
+}
+/* The two arms are out of phase, so the figure sways rather than flaps. */
+@keyframes kArmSwing {
+  0%, 100% { transform: rotate(2.5deg); }
+  50% { transform: rotate(-3.5deg); }
+}
+@keyframes kArmSwingR {
+  0%, 100% { transform: rotate(-2.5deg); }
+  50% { transform: rotate(3.5deg); }
+}
+
 /* --- the reaction vocabulary -------------------------------------------- */
 @keyframes kRigHop {
   0% { transform: translateY(0) scale(1, 1); }
@@ -789,9 +872,127 @@
 .podium-figure.react-reject .kchar-rig .khead,
 .display-podium-figure.react-reject .kchar-rig .khead { animation: kRigNo 0.5s ease-in-out 3 both; }
 
+
+/* --- and what the arms do on each of them --------------------------------- */
+.kchar-holder.react-correct .kchar-rig .karm,
+.podium-figure.react-correct .kchar-rig .karm {
+  animation: kArmUp 0.52s ease-in-out 4 both;
+}
+.kchar-holder.react-correct .kchar-rig .krig-arm-r { animation-name: kArmUpR; }
+
+.kchar-holder.react-wrong .kchar-rig .karm,
+.podium-figure.react-wrong .kchar-rig .karm {
+  animation: kArmHang 1.7s ease-out both;
+}
+
+.kchar-holder.react-win .kchar-rig .karm,
+.podium-figure.react-win .kchar-rig .karm,
+.display-podium-figure.react-win .kchar-rig .karm {
+  animation: kArmCheer 0.4s ease-in-out 4 both;
+}
+.kchar-holder.react-win .kchar-rig .krig-arm-r,
+.podium-figure.react-win .kchar-rig .krig-arm-r { animation-name: kArmCheerR; }
+
+.kchar-holder.react-clap .kchar-rig .karm,
+.podium-figure.react-clap .kchar-rig .karm,
+.display-podium-figure.react-clap .kchar-rig .karm {
+  animation: kArmClapL 0.42s ease-in-out infinite;
+}
+.kchar-holder.react-clap .kchar-rig .krig-arm-r,
+.podium-figure.react-clap .kchar-rig .krig-arm-r { animation-name: kArmClapR; }
+
+.kchar-holder.react-streak .kchar-rig .karm,
+.podium-figure.react-streak .kchar-rig .karm {
+  animation: kArmPump 0.44s ease-in-out 6 both;
+}
+.kchar-holder.react-streak .kchar-rig .krig-arm-r { animation-name: kArmPumpR; }
+
+.kchar-holder.react-lead .kchar-rig .karm,
+.podium-figure.react-lead .kchar-rig .karm {
+  animation: kArmPoint 1.2s ease-in-out both;
+}
+
+.kchar-holder.react-rush .kchar-rig .karm,
+.podium-figure.react-rush .kchar-rig .karm {
+  animation: kArmRush 0.4s ease-in-out infinite;
+}
+.kchar-holder.react-rush .kchar-rig .krig-arm-r { animation-name: kArmRushR; }
+
+.kchar-holder.react-wave .kchar-rig .krig-arm-r,
+.podium-figure.react-wave .kchar-rig .krig-arm-r {
+  animation: kArmWave 0.9s ease-in-out infinite;
+}
+
+.kchar-holder.react-buzz .kchar-rig .karm,
+.podium-figure.react-buzz .kchar-rig .karm {
+  animation: kArmUp 0.3s ease-in-out 6 both;
+}
+.kchar-holder.react-buzz .kchar-rig .krig-arm-r { animation-name: kArmUpR; }
+
+.kchar-holder.react-accept .kchar-rig .karm { animation: kArmUp 0.4s ease-in-out 2 both; }
+.kchar-holder.react-accept .kchar-rig .krig-arm-r { animation-name: kArmUpR; }
+.kchar-holder.react-reject .kchar-rig .karm { animation: kArmHang 1.2s ease-out both; }
+
+@keyframes kArmUp {
+  0%, 100% { transform: rotate(4deg); }
+  45% { transform: rotate(-58deg); }
+}
+@keyframes kArmUpR {
+  0%, 100% { transform: rotate(-4deg); }
+  45% { transform: rotate(58deg); }
+}
+@keyframes kArmCheer {
+  0%, 100% { transform: rotate(6deg); }
+  50% { transform: rotate(-72deg); }
+}
+@keyframes kArmCheerR {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(72deg); }
+}
+@keyframes kArmHang {
+  0% { transform: rotate(0deg); }
+  35% { transform: rotate(9deg); }
+  100% { transform: rotate(6deg); }
+}
+@keyframes kArmClapL {
+  0%, 100% { transform: rotate(12deg); }
+  50% { transform: rotate(-26deg); }
+}
+@keyframes kArmClapR {
+  0%, 100% { transform: rotate(-12deg); }
+  50% { transform: rotate(26deg); }
+}
+@keyframes kArmPump {
+  0%, 100% { transform: rotate(0deg); }
+  40% { transform: rotate(-46deg); }
+  70% { transform: rotate(-14deg); }
+}
+@keyframes kArmPumpR {
+  0%, 100% { transform: rotate(0deg); }
+  40% { transform: rotate(46deg); }
+  70% { transform: rotate(14deg); }
+}
+@keyframes kArmPoint {
+  0%, 100% { transform: rotate(0deg); }
+  45% { transform: rotate(-52deg); }
+}
+@keyframes kArmRush {
+  0%, 100% { transform: rotate(6deg); }
+  50% { transform: rotate(-10deg); }
+}
+@keyframes kArmRushR {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(10deg); }
+}
+@keyframes kArmWave {
+  0%, 100% { transform: rotate(46deg); }
+  50% { transform: rotate(78deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kchar-rig .krig,
-  .kchar-rig .khead {
+  .kchar-rig .khead,
+  .kchar-rig .karm {
     animation: none !important;
   }
 }

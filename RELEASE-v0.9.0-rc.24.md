@@ -47,27 +47,57 @@ about its own neck, not a shared guess.
 
 ## 3. What moves
 
-| Moment | Head | Body |
-| --- | --- | --- |
-| **Idle, all night** | looks around on its own slow timer | breathes; each figure has its own beat |
-| **Right answer** | nods, four times | two hops with a squash and a stretch |
-| **Wrong answer** | shakes "no" | sinks, tilts, greys for a beat |
-| **Win (1st)** | cheers, then settles | a full spin with a hop |
-| **2nd / 3rd** | bobs in time | a polite clap-bounce, endless |
-| **3 in a row or better** | nods on every beat | six quick bounces |
-| **Taking the lead** | looks up | a big jump with a tilt |
-| **Last 5 seconds** | wobbles | vibrates on the spot |
-| **Buzzer** | shakes | shakes hard |
-| **Lobby / wave** | sways opposite the body | sways side to side |
+| Moment | Head | Body | Hands |
+| --- | --- | --- | --- |
+| **Idle, all night** | looks around on its own slow timer | breathes; each figure has its own beat | down, at the sides |
+| **Right answer** | nods, four times | two hops with a squash and a stretch | **up** |
+| **Wrong answer** | shakes "no" | sinks, tilts, greys for a beat | down |
+| **Win (1st)** | cheers, then settles | a full spin with a hop | **up, jumping** |
+| **2nd / 3rd** | bobs in time | a polite clap-bounce, endless | **up** |
+| **3 in a row or better** | nods on every beat | six quick bounces | **up** |
+| **Taking the lead** | looks up | a big jump with a tilt | **up** |
+| **Last 5 seconds** | wobbles | vibrates on the spot | down |
+| **Buzzer** | shakes | shakes hard | **up** |
+| **Lobby / wave** | sways opposite the body | sways side to side | down |
 
 That is more motion than rc.23 for every outcome, and it survives the phone
 redrawing its figure mid-reveal. `prefers-reduced-motion` stops all of it.
 
-**Two honest limits.** (1) The painted faces have real eyes, so an eyelid blink
-would need a second set of 24 head renders — instead the head itself moves, all
-night, which is what makes it read as alive. (2) Arms travel with the body: a
-cut arm on a painted figure leaves the sleeve behind, so the arms swing as part
-of the hop, lean and spin rather than on their own.
+### The hands
+
+A painted figure holds its upper arm against its body: there is no daylight
+between sleeve and torso to cut along, and cutting anyway leaves a slot that has
+to be painted back in — which is exactly how the first attempt at this release
+came out as a figure that bounced but never moved a hand.
+
+So the hands move a different way. **Each character has a second render** — the
+same figure, same lighting, same framing, with both arms up at the shoulders —
+and a reaction swaps it in for the length of the beat. The swap is anchored
+head-to-head: the head is the one part of a character that does not move between
+poses, so the two renders are scaled and placed by matching hair width and hair
+top, and the feet land on the same ground line by construction. The cheer canvas
+is wider than the idle frame, and it is allowed to overflow it, because a raised
+arm reaches outside the box an arm-at-rest figure needs.
+
+`design-lab/twin-3d/pose2.py` does the alignment per character. **All 24
+characters have one**; a character without one would simply fall back to the
+rc.23 behaviour in the table above with an empty hands column.
+
+**One honest limit.** The painted faces have real eyes, so an eyelid blink would
+need a third set of renders — instead the head itself moves, all night, which is
+what makes it read as alive.
+
+## 3b. What the cheer is, and what it is not
+
+It is a **pose change**, not a limb rig: the figure does not lift one hand while
+the other stays put. Cheering, clapping, taking the lead and buzzing all show
+the hands-up figure bouncing; the win spins and jumps with the hands still up;
+everything else shows the hands-down figure. There is no per-finger or per-elbow
+motion, and none is planned — the source art is a painted figure whose arms are
+part of its silhouette, and the two-pose swap is what that art supports.
+
+The swap is instant, on the same beat as the rest of the reaction, and it is
+cancelled by `prefers-reduced-motion` along with every other animation.
 
 ## 4. The picker, after the deletion
 
@@ -104,4 +134,6 @@ drawn figures are still used, and it is invisible unless you tap it.
 | The rig on a real figure | preview is `max-head.webp` + `max-body.webp` in one SVG; head origin `150px 303px`; `kRigIdle` on the body and `kRigLook` on the head, both clocks running |
 | The neck, at 3× zoom | heads turned −14°…+14° on Max, Grandpa, Viking, Chef and Royal: no seam, no hole, no bar across the face |
 | The room | reveal reaction `react-wrong` on the phone, podium `react-win` + 2 × `react-clap` |
-| Payload | 1.3 MB of layers replaces 0.87 MB of sprites — 24 characters instead of 19, at about 55 KB each |
+| Payload | 1.8 MB of layers replaces 0.87 MB of sprites — 24 characters instead of 19, at about 75 KB each |
+| All 24 cheer poses | each character's `-cheer.webp` present in `assets/3d`, in `manifest.json`, in `characters3d.gen.js` and in the ship list — 24 / 24 |
+| The cheer in a live phone | `kcheer` visible, head and body hidden, `kCheerBob` running; no 404s; the header chip stays 20 px and does not overflow |

@@ -22,7 +22,7 @@ variable on the hosting dashboard, without touching code.
 | Timer per question | 5–120 seconds | no |
 | Timer, round buttons | 10, 15, 20, 30, 35, 40, 45, 60, 90, 120 seconds | no |
 | A player's own face | One per player per room: 240 × 400 WebP/PNG, up to 160 KB, held in the live room's memory and dropped when the room ends or the player changes look. Never written to a quiz, attempt, report or export | no |
-| Characters | 24 painted 3D characters, each a head layer + a body layer + a 128 px thumb (about 55 KB per character, 1.3 MB in all) | no |
+| Characters | 24 painted 3D characters, each a head layer + a body layer + a 128 px thumb + a cheer pose (about 60 KB per character, 1.5 MB in all) | no |
 | Character motion | every figure breathes and turns its head; 12 reactions move the head and the whole body — no video, no extra downloads | no |
 | Where characters appear | The player's own phone, the lobby and the final podium. Never during a question, a reveal or a live leaderboard | no |
 | Your own face | Optional, and it stays on a drawn body — the face tile is the only place the drawn figures are still used | no |

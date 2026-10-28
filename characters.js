@@ -108,12 +108,38 @@
     const [nx, ny] = r.neck;
     const [hx, hy, hw, hh] = r.head;
     const [bx, by, bw, bh] = r.body;
+    // Arms are only there where the render already had daylight between arm
+    // and body; the rest of the cast swings with its shoulders.
+    // A hand cut out of a render whose sleeve is welded to the torso floats
+    // away from the cuff, so those layers are not used. The hands move instead
+    // by the whole figure changing pose — see the cheer layer below.
+    const ARMS_ON = false;
+    const arm = (side) => {
+      const a = ARMS_ON && r.arms?.[side];
+      if (!a) return "";
+      const [ax, ay, aw, ah] = a.box;
+      return `<g class="karm krig-arm-${side}" style="transform-origin:${(a.p[0] * r.w).toFixed(1)}px ${(a.p[1] * r.h).toFixed(1)}px">
+          <image href="/assets/3d/${photo.id}-arm-${side}.webp" x="${ax}" y="${ay}" width="${aw}" height="${ah}" preserveAspectRatio="none" />
+        </g>`;
+    };
     // Every figure breathes on its own clock, so a lobby never moves in unison.
+    // The cheer: a second render of the same figure with both hands up. It is
+    // drawn over the body and under nothing — when a reaction plays, it takes
+    // the place of the head and the body entirely, so the hands really move
+    // rather than a hand sliding out of a fixed sleeve.
+    const cheer = r.cheer
+      ? `<g class="kcheer">
+          <image href="/assets/3d/${photo.id}-cheer.webp" x="${r.cheer[0]}" y="${r.cheer[1]}" width="${r.cheer[2]}" height="${r.cheer[3]}" preserveAspectRatio="none" />
+        </g>`
+      : "";
     const beat = `${(Math.random() * 2.4).toFixed(2)}s`;
     const look = `${(Math.random() * 4).toFixed(2)}s`;
-    return `<span class="kchar kchar-rig" style="--beat:${beat};--lookBeat:${look}">
+    const swing = `${(Math.random() * 0.6).toFixed(2)}s`;
+    return `<span class="kchar kchar-rig" style="--beat:${beat};--lookBeat:${look};--swingBeat:${swing}">
       <svg class="krig" viewBox="0 0 ${r.w} ${r.h}" preserveAspectRatio="xMidYMax meet" role="img" aria-label="${label}" xmlns="http://www.w3.org/2000/svg">
         <image class="krig-body" href="/assets/3d/${photo.id}-body.webp" x="${bx}" y="${by}" width="${bw}" height="${bh}" preserveAspectRatio="none" ${options.extra || ""} />
+        ${arm("l")}${arm("r")}
+        ${cheer}
         <g class="khead krig-head" style="transform-origin:${(nx * r.w).toFixed(1)}px ${(ny * r.h).toFixed(1)}px">
           <image class="krig-face" href="/assets/3d/${photo.id}-head.webp" x="${hx}" y="${hy}" width="${hw}" height="${hh}" preserveAspectRatio="none" />
         </g>

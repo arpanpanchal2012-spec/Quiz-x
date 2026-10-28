@@ -10,11 +10,14 @@ saw, plus the five new ones: **Max**, **Ace**, **Professor**, **Riff** and
 **Grandpa**.
 
 **And they really move.** Each one is cut into a head and a body with its own
-neck pivot, so:
+neck pivot, and each one has a second **arms-up pose**, so:
 
 - the **head turns** on its own — looking around all night, nodding on a right
   answer, shaking "no" on a wrong one, cheering a win;
-- the **body** breathes, hops, leans, spins, bounces and shakes.
+- the **body** breathes, hops, leans, spins, bounces and shakes;
+- the **hands go up** — on a right answer, a win, a clap, a streak, taking the
+  lead and on a buzzer, the whole figure changes to its cheer pose and bounces.
+  All 24 characters have it.
 
 Right answer: two hops with a nod. Wrong: the figure sinks and the head shakes.
 Win: a full spin and a cheer. Second and third: a bouncing clap. Three in a row:
@@ -29,7 +32,8 @@ there.
 
 1. **Upload `Quizzes-v0.9.0-rc.24-update.zip`** into your GitHub repository root
    and let it replace the files. It adds `characters3d.gen.js` and the
-   `assets/3d/` folder (72 character layers) and updates `characters.js`,
+   `assets/3d/` folder (96 character layers, including a cheer pose for every
+   character) and updates `characters.js`,
    `characters.css`, `styles.css`, `app.js`, `server.js`, `index.html`,
    `display.html`, `rehearsal.html`, `package.json`, `LIMITS.md`.
    **Never replace `database-config.js`** — it is not in the update zip.

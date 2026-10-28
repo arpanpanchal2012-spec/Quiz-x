@@ -902,7 +902,7 @@ const server = http.createServer(async (req, res) => {
     // climb out of assets/3d — nothing else is reachable here.
     if (p.startsWith("/assets/3d/")) {
       const sprite = p.slice(11);
-      if (!/^[a-z]+-(head|body|thumb)\.webp$/.test(sprite)) return fail("Not found", 404);
+      if (!/^[a-z]+-(head|body|thumb|arm-l|arm-r|cheer)\.webp$/.test(sprite)) return fail("Not found", 404);
       const file = path.join(__dirname, "assets", "3d", sprite);
       if (!fs.existsSync(file)) return fail("Not found", 404);
       res.writeHead(200, {
