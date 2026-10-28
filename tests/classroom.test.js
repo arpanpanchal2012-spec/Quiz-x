@@ -323,13 +323,14 @@ test("every player is given a character of their own", { timeout: 60000 }, async
       // A picture is whole on its own, so a hat chosen with it is not worn.
       assert.equal(me.accessory, "none");
     });
-    await t.test("a picture nobody knows is replaced by a drawing", async () => {
+    await t.test("a look nobody knows is replaced by one from the cast", async () => {
       const p = await socket();
       p.send("join_game", { code, name: "Player 11", character: "photo:nope" });
       const joined = await p.wait("joined");
       const me = joined.game.participants.find((x) => x.id === joined.playerId);
       assert.ok(me.character && me.character !== "photo:nope", me.character);
-      assert.ok(!me.character.includes(":"), me.character);
+      // rc.24: the 3D cast is the picker, so that is what an unknown id becomes.
+      assert.match(me.character, /^photo:[a-z]+$/, me.character);
     });
     await t.test("a player's own face goes into the room, and only there", async () => {
       const p = await socket();
@@ -453,6 +454,80 @@ test("every player is given a character of their own", { timeout: 60000 }, async
       assert.equal(owl.character, "owl");
       assert.equal(owl.accessory, "crown");
       db.close();
+    });
+  } finally {
+    await new Promise((r) => {
+      server.child.once("exit", r);
+      server.child.kill("SIGKILL");
+    });
+    fs.rmSync(data, { recursive: true, force: true });
+  }
+});
+
+// rc.24: the characters are painted renders, cut into a head and a body. A
+// phone should never see a broken figure, so the files, the numbers that place
+// the layers, and the public route that serves them are all checked here.
+test("the 3D cast is complete, rigged and online without a login", { timeout: 45000 }, async (t) => {
+  const characters = require(path.join(root, "characters.js"));
+  globalThis.window = { QUIZZES_RIGS: {} };
+  require(path.join(root, "characters3d.gen.js"));
+  const rigs = globalThis.window.QUIZZES_RIGS;
+  delete globalThis.window;
+
+  await t.test("every character the picker offers has a rig", () => {
+    const ids = characters.PHOTO_IDS.map((id) => id.slice(6));
+    assert.equal(ids.length, 24, `${ids.length} characters`);
+    for (const id of ids) {
+      assert.ok(rigs[id], `${id} has no rig`);
+      for (const part of ["head", "body", "thumb"]) {
+        const file = path.join(root, "assets", "3d", `${id}-${part}.webp`);
+        assert.ok(fs.existsSync(file), `${id}-${part}.webp is missing`);
+        assert.ok(fs.statSync(file).size > 2000, `${id}-${part}.webp looks empty`);
+      }
+    }
+  });
+
+  await t.test("the neck pivot sits inside the head layer it turns", () => {
+    for (const [id, r] of Object.entries(rigs)) {
+      const [nx, ny] = r.neck;
+      const [hx, hy, hw, hh] = r.head;
+      assert.ok(nx > 0 && nx < 1 && ny > 0.3 && ny < 0.75, `${id} neck ${ny}`);
+      // The pivot must be on the head layer, and near its lower edge.
+      assert.ok(nx * r.w >= hx && nx * r.w <= hx + hw, `${id} neck is off the head layer`);
+      // The pivot is the head cut, so it sits on the bottom edge of that layer
+      // within the rounding of the fraction in the generated file.
+      assert.ok(ny * r.h >= hy && ny * r.h <= hy + hh + 3, `${id} neck is above the head`);
+    }
+  });
+
+  await t.test("the body layer keeps the jaw, so a turned head shows no hole", () => {
+    for (const [id, r] of Object.entries(rigs)) {
+      assert.ok(r.body[1] < r.neck[1] * r.h, `${id} body starts below the neck cut`);
+      assert.ok(r.body[1] + r.body[3] >= r.h - 2, `${id} body stops short of the feet`);
+    }
+  });
+
+  const data = fs.mkdtempSync(path.join(root, ".test-rigs-"));
+  const server = startServer(data);
+  try {
+    await server.ready;
+    await t.test("a layer is served to anyone, with a long cache", async () => {
+      const res = await fetch(`${origin}/assets/3d/max-head.webp`);
+      assert.equal(res.status, 200);
+      assert.equal(res.headers.get("content-type"), "image/webp");
+      assert.ok(res.headers.get("cache-control").includes("max-age"));
+      assert.ok((await res.arrayBuffer()).byteLength > 2000);
+    });
+    await t.test("and nothing else in the folder is reachable", async () => {
+      for (const p of [
+        "/assets/3d/manifest.json",
+        "/assets/3d/../server.js",
+        "/assets/3d/manifest.json.txt",
+        "/characters/ph-sparkle.webp",
+      ]) {
+        const res = await fetch(`${origin}${p}`);
+        assert.ok(res.status === 404 || res.status === 400, `${p} returned ${res.status}`);
+      }
     });
   } finally {
     await new Promise((r) => {

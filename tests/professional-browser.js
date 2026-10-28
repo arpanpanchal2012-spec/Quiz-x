@@ -224,11 +224,9 @@ module.exports = async function professionalBrowser({ page, browser, errors }) {
   await phone.goto("/join?code=" + code);
   await phone.locator("#playerNameInput").fill("Professional phone test");
   await phone.locator("#joinGameBtn").click();
-  // rc.19: choose a character before entering the room. rc.21 opens on the
-  // picture characters, so the drawn grid is one tab away.
+  // rc.24: one grid of 3D characters — pick one, then join.
   await phone.locator("#charPicker:not([hidden])").waitFor();
-  await phone.locator("#charTabCharacter").click();
-  await phone.locator('#charGrid [data-character="fox"]').click();
+  await phone.locator('#photoGrid [data-character="photo:ace"]').click();
   await phone.locator("#joinConfirm").click();
   await expect(phone.locator("#playerQuestion")).toBeVisible();
   await page.locator("#nextQuestion").click();
