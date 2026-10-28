@@ -20,9 +20,10 @@ const QUIZ = {
           notes: "Play clip 2",
         },
         {
-          type: "text",
+          type: "choice",
           text: "Two plus two?",
-          accepted: ["4"],
+          options: ["4", "5", "6", "7"],
+          correct: 0,
           seconds: 20,
           points: 1000,
         },
@@ -228,7 +229,14 @@ module.exports = async function buzzerBrowser({ page, browser, password }) {
   await expect(page.locator('#nextQuestion')).toHaveText(/Start last question/);
   await page.locator('#nextQuestion').click();
   await expect(page.locator('#hostQuestion')).toHaveText('Two plus two?');
-  console.log("      buzzer: projector queue, reconnect, reveal and next question passed");
+  await page.locator('#nextQuestion').click();
+  await projector.setViewportSize({ width: 1440, height: 960 });
+  await expect(projector.locator('.showcase-question .display-option')).toHaveCount(4);
+  await expect(projector.locator('#displayCount')).not.toContainText('answered');
+  const bounds = await projector.locator('#displayStage').evaluate(el => ({ client: el.clientHeight, scroll: el.scrollHeight }));
+  expect(bounds.scroll).toBeLessThanOrEqual(bounds.client + 3);
+  await projector.screenshot({path: '/home/user/quizzes-actual-projector.png', animations: 'disabled'});
+  console.log("      buzzer: projector queue, reconnect, reveal, next question and stage passed");
   await projector.close();
 
   for (const phone of phones) await phone.ctx.close();
