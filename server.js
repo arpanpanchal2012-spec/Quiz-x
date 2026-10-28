@@ -1382,6 +1382,8 @@ async function startQuestion(g) {
   // as the scoring window, so earlier buzzers earn more.
   if (current(g).type === "buzzer") {
     g.status = "buzzer";
+    // Server clock starts as the buzzer opens for fair elapsed times and scoring.
+    g.startedAt = Date.now();
     g.deadline = null;
     g.buzzes = [];
     g.buzzingOpen = true;
@@ -1428,6 +1430,7 @@ function sync(ws, g, type, extra = {}) {
     leaderboard: g.status === "ended" ? ranking(g) : null,
     serverNow: Date.now(),
     visibleLeaderboard: g.leaderboardVisible ? ranking(g) : [],
+    ...(g.status === "buzzer" ? { buzzes: buzzQueue(g), open: !!g.buzzingOpen } : {}),
     ...extra,
   });
   markLiveDirty(g);

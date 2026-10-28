@@ -8956,3 +8956,120 @@ body[data-tone="3"] { --tone: #f6c542; }
 }
 .projector-figure .kchar { width: 100%; height: 100%; }
 .projector-figure img.kchar { object-fit: contain; }
+
+/* Quiet stage lighting: decorative only; no faces on the game screen. */
+#gameModal[data-phase="question"] .stage-question,
+.projector-page .projector-stage {
+  background-image: radial-gradient(ellipse at 12% 85%, #9352e51b, transparent 40%),
+    radial-gradient(ellipse at 88% 18%, #e1a85117, transparent 38%);
+}
+.player-waiting-figure:not([hidden]) {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 120px;
+  padding: 8px;
+}
+.player-waiting-figure .kchar-hero {
+  width: min(36vw, 150px);
+  height: min(36vw, 150px);
+}
+@media (max-height: 600px) {
+  .player-waiting-figure:not([hidden]) { min-height: 60px; }
+  .player-waiting-figure .kchar-hero { width: 70px; height: 70px; }
+}
+
+/* Show-stage visual: desktop projector questions without a picture. The phone,
+   buzzer, picture and reveal layouts keep their established space and controls. */
+@media (min-width: 900px) and (min-height: 650px) {
+  .projector-page .projector-stage:has(.showcase-question) {
+    justify-content: stretch;
+    background:
+      radial-gradient(ellipse at 50% 100%, transparent 37%, #ffae3c99 37.2%, #b64cff91 37.5%, transparent 38%, transparent 40%, #a74bff88 40.2%, transparent 40.6%),
+      radial-gradient(circle at 4% 48%, #ffc55ca8 0 3px, transparent 8px),
+      radial-gradient(circle at 94% 56%, #e65dfc99 0 4px, transparent 10px),
+      radial-gradient(ellipse at 50% 14%, #5519a1bb, transparent 62%),
+      linear-gradient(180deg, #180b42, #140a35 70%, #240c48);
+  }
+  .projector-page .showcase-question {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto minmax(130px, 1fr) 70px minmax(145px, .75fr);
+    gap: 10px 20px;
+  }
+  .showcase-question .display-meta { display: contents; }
+  .showcase-question .display-meta > span {
+    grid-row: 1;
+    align-self: center;
+    color: #e0d4ff;
+    border: 1px solid #aa89ff55;
+    border-radius: 12px;
+    padding: 11px 16px;
+    background: #180e3bbb;
+    width: fit-content;
+  }
+  .showcase-question .display-meta > span:nth-child(2) { justify-self: end; }
+  .showcase-question #displayTimer {
+    grid-row: 3;
+    grid-column: 1 / -1;
+    place-self: center;
+    min-width: 82px;
+    height: 64px;
+    display: grid;
+    place-items: center;
+    border-radius: 40px;
+    border: 5px solid #f4cb32;
+    background: #20104b;
+    color: white;
+    box-shadow: 0 0 0 7px #6136ad, 0 8px 28px #0d052ccc;
+  }
+  .showcase-question h1 {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 1120px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 20px 36px;
+    border-radius: 22px;
+    box-shadow: 0 14px 45px #05001888;
+    font-size: clamp(36px, 4.6vw, 68px);
+  }
+  .showcase-question .display-options {
+    grid-row: 4;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: minmax(100px, 1fr);
+    gap: 14px;
+    align-content: stretch;
+  }
+  .showcase-question .display-option {
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    gap: 12px;
+    border-radius: 20px;
+    border: 2px solid #ffffff4d;
+    font-size: clamp(23px, 2.8vw, 42px);
+  }
+  .showcase-question .display-option > span:first-child {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: #16053550;
+    font-size: 23px;
+  }
+  .showcase-question .display-option.tile-0 { background: linear-gradient(#ff5245, #df1f2c); color: #fff; }
+  .showcase-question .display-option.tile-1 { background: linear-gradient(#518bfa, #2053c5); color: #fff; }
+  .showcase-question .display-option.tile-2 { background: linear-gradient(#52c96a, #169348); color: #fff; }
+  .showcase-question .display-option.tile-3 { background: linear-gradient(#ffb719, #eb8200); color: #fff; }
+  .showcase-question .display-options:has(.display-option:nth-child(5)) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

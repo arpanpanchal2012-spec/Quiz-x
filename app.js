@@ -1637,7 +1637,11 @@ function handleMessage(m) {
       $("#previewPlayer").href = joinURL();
     }
     loadGameMusic(m.music);
-    if (game.status === "buzzer") renderBuzzer();
+    if (game.status === "buzzer") {
+      buzzes = m.buzzes || [];
+      buzzOpen = m.open !== false;
+      renderBuzzer();
+    }
     else if (game.status === "question") renderQuestion();
     else if (game.status === "results") {
       // Reconstruct the question before applying results after a reconnect/reload.
@@ -1840,12 +1844,27 @@ function hideBuzzer() {
   syncClipButtons();
 }
 function renderBuzzer() {
+  $("#playerWaitingFigure").hidden = true;
   hideAnswerChart();
+  showLiveLeaderboard(false, []);
   const q = liveQuestion;
   if (!q) return;
   sound.setPhase("question");
   setGameStyle("question");
   const prefix = participantMode ? "player" : "host";
+  // The previous question's reveal must never carry into a buzzer question.
+  $(`#${prefix}Hint`).textContent = "";
+  const summary = $(`#${prefix}AnswerSummary`);
+  if (summary) {
+    summary.textContent = "";
+    summary.hidden = true;
+  }
+  $(`#${prefix}Results`).innerHTML = "";
+  if (participantMode) $("#answerStatus").textContent = "";
+  else {
+    $("#hostMedia").innerHTML = "";
+    $(".stage-question")?.classList.remove("has-media");
+  }
   $(`#${prefix}Round`).textContent =
     `${q.roundLabel || roundTitle(q.roundIndex, q.round)}${q.lastInRound ? " · Last question of this round" : ""}`;
   $(`#${prefix}${participantMode ? "Title" : "Question"}`).textContent = q.text;
@@ -1874,7 +1893,8 @@ function renderBuzzer() {
         audio.addEventListener(event, syncClipButtons);
   }
   syncClipButtons();
-  $("#nextQuestion").disabled = true;
+  $("#nextQuestion").textContent = "Reveal answer →";
+  $("#nextQuestion").disabled = false;
   renderBuzzQueue();
 }
 function renderBuzzQueue() {
@@ -1947,6 +1967,11 @@ function renderQuestion() {
   // Step one: the question is on screen on its own and the host reads it out.
   // Step two begins when the host presses again and the options arrive.
   const optionsReady = q.optionsVisible !== false;
+  const waitingFigure = $("#playerWaitingFigure");
+  const me = participantMode ? game.participants.find((p) => p.id === myPlayerId) : null;
+  const showFigure = !!(participantMode && me && !optionsReady && !q.media);
+  waitingFigure.hidden = !showFigure;
+  waitingFigure.innerHTML = showFigure ? characterSVG(me, "kchar-hero is-idle") : "";
   // The phone gets no instructions during a question — the question, the
   // picture and the answers speak for themselves. The host keeps a one-line
   // cue, because the two presses are the host's job.
@@ -2509,6 +2534,8 @@ setInterval(() => {
   }
   const text = counting
     ? remaining + "s"
+    : game.status === "buzzer"
+      ? (buzzOpen ? "BUZZ" : "CLOSED")
     : ["lobby", "round_intro", "last_question_intro"].includes(game.status) ||
         game.status === "question"
       ? "READY"
@@ -2537,7 +2564,10 @@ $("#nextQuestion").onclick = () => {
     send("show_options");
     return;
   }
-  if (game.status === "question") {
+  if (game.status === "buzzer") {
+    if (confirm("End buzzing and reveal the answer with no winner?"))
+      send("reveal_answers");
+  } else if (game.status === "question") {
     if (confirm("End the timer now and reveal the correct answer?"))
       send("reveal_answers");
   } else send("next_question");
@@ -3207,6 +3237,7 @@ function toneFor(question) {
   if (player) player.dataset.tone = tone;
 }
 function setGameStyle(phase) {
+  if (phase !== "question") $("#playerWaitingFigure").hidden = true;
   if (["lobby", "round_intro", "last_question_intro", "ended"].includes(phase))
     currentHostImageKey = null;
   if (phase === "ended") clearHostImages();

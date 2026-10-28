@@ -135,7 +135,9 @@
     $("#displayTitle").textContent = game.title;
     $("#displayCode").textContent = "Join · " + game.code;
     $("#displayCount").textContent =
-      `${game.participants.length} joined · ${game.participants.filter((p) => p.answered).length} answered`;
+      game.status === "question" || game.status === "buzzer"
+        ? `${game.participants.length} joined`
+        : `${game.participants.length} joined · ${game.participants.filter((p) => p.answered).length} answered`;
     const stage = $("#displayStage");
     // At the reveal the room reads three things in order: the question, then the
     // bars, then which answer was right. All three stay on screen.
@@ -185,7 +187,7 @@
       });
     } else if (game.status === "buzzer" && question) {
       const queue = buzzes || [];
-      stage.innerHTML = `<section class="display-question display-buzzer"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer">${buzzOpen ? "BUZZ OPEN" : "BUZZ CLOSED"}</b></div><h1>${escape(question.text)}</h1><div class="display-buzzes">${queue.length ? `<ol>${queue.slice(0, 8).map((b) => `<li class="buzz-row buzz-${escape(b.status)}"><b class="buzz-pos">${b.position}</b><span class="buzz-name">${escape(b.name)}</span><span class="buzz-time">${(b.elapsedMs / 1000).toFixed(1)}s</span>${b.points ? `<span class="buzz-points">${b.points > 0 ? "+" : "−"}${Math.abs(b.points).toLocaleString()}</span>` : ""}</li>`).join("")}</ol>` : '<p class="muted">No one has buzzed in yet.</p>'}</div></section>`;
+      stage.innerHTML = `<section class="display-question display-buzzer"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer">${buzzOpen ? "BUZZ OPEN" : "BUZZ CLOSED"}</b></div><h1>${escape(question.text)}</h1><div class="display-buzzes">${queue.length ? `<ol>${queue.map((b) => `<li class="buzz-row buzz-${escape(b.status)}"><b class="buzz-pos">${b.position}</b><span class="buzz-name">${escape(b.name)}</span><span class="buzz-time">${(b.elapsedMs / 1000).toFixed(1)}s</span>${b.points ? `<span class="buzz-points">${b.points > 0 ? "+" : "−"}${Math.abs(b.points).toLocaleString()}</span>` : ""}</li>`).join("")}</ol>` : '<p class="muted">No one has buzzed in yet.</p>'}</div></section>`;
       tick();
     } else if (question) {
       // Two steps on the projector too: the question lands alone, then the
@@ -199,7 +201,7 @@
       // width, then the answers. The room knows what to do with a phone.
       const image = question.media && question.mediaType?.startsWith("image/");
       const audio = question.media && !image;
-      stage.innerHTML = `<section class="display-question${image ? " has-image" : ""}"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer"></b></div><h1>${escape(question.text)}</h1>${
+      stage.innerHTML = `<section class="display-question${image ? " has-image" : ""}${game.status === "question" && !image && !audio && ["choice", "multi", "boolean"].includes(question.type) ? " showcase-question" : ""}"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer"></b></div><h1>${escape(question.text)}</h1>${
         image
           ? `<div class="display-media"><img loading="eager" fetchpriority="high" decoding="async" src="${escape(question.media)}" alt="Question image"></div>`
           : audio
@@ -226,7 +228,9 @@
     const el = $("#displayTimer");
     if (el && game)
       el.textContent =
-        game.status === "question"
+        game.status === "buzzer"
+          ? (buzzOpen ? "BUZZ OPEN" : "BUZZ CLOSED")
+          : game.status === "question"
           ? game.deadline
             ? Math.max(
                 0,
@@ -272,6 +276,8 @@
         result = m.result;
         rows = m.leaderboard || m.visibleLeaderboard || [];
         board = game.leaderboardVisible;
+        buzzes = m.buzzes || [];
+        buzzOpen = m.open !== false;
         if (m.serverNow) offset = m.serverNow - Date.now();
         $("#displayConnection").textContent = "Connected · audience display";
         render();
@@ -317,7 +323,9 @@
         render();
       } else if (m.type === "participants_updated") {
         $("#displayCount").textContent =
-          `${game.participants.length} joined · ${game.participants.filter((p) => p.answered).length} answered`;
+          game.status === "question" || game.status === "buzzer"
+        ? `${game.participants.length} joined`
+        : `${game.participants.length} joined · ${game.participants.filter((p) => p.answered).length} answered`;
         if (board) {
           rows = [...game.participants]
             .sort((a, b) => b.score - a.score)
