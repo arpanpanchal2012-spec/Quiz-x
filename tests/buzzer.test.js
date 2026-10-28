@@ -226,6 +226,8 @@ test(
       );
 
       await t.test("buzzes are ordered by the server clock", async () => {
+        // The server clock must run even though there is no countdown.
+        await new Promise((resolve) => setTimeout(resolve, 120));
         // Buzz in a deliberately shuffled order: Meera, Anita, Rahul.
         players[2].send("buzz");
         await players[2].wait("buzz_received");
@@ -241,6 +243,8 @@ test(
           queue.buzzes.map((b) => b.name),
           ["Meera", "Anita", "Rahul"],
         );
+        assert.ok(queue.buzzes[0].elapsedMs >= 100, "elapsed time starts at the buzzer question");
+        assert.ok(queue.buzzes.every((b) => b.elapsedMs >= queue.buzzes[0].elapsedMs));
         assert.deepEqual(
           queue.buzzes.map((b) => b.position),
           [1, 2, 3],

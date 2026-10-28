@@ -110,8 +110,23 @@ module.exports = async function buzzerBrowser({ page, browser, password }) {
     phones.push({ name, page: p, ctx });
   }
 
+  // Open the real projector, and simulate the preceding question's reveal.
+  const popup = page.waitForEvent("popup");
+  await page.locator("#openProjector").click();
+  const projector = await popup;
+  await expect(projector.locator("#displayConnection")).toContainText("Connected");
+  await page.evaluate(() => { document.querySelector('#hostHint').textContent = 'Correct answer: OLD'; document.querySelector('#hostAnswerSummary').hidden = false; });
+  for (const phone of phones) await phone.page.evaluate(() => { document.querySelector('#playerHint').textContent = 'Correct answer: OLD'; document.querySelector('#playerAnswerSummary').hidden = false; });
+
   // --- host starts the buzzer question ---
   await page.locator("#nextQuestion").click();
+  await expect(page.locator('#hostHint')).toBeEmpty();
+  await expect(page.locator('#hostAnswerSummary')).toBeHidden();
+  for (const phone of phones) {
+    await expect(phone.page.locator('#playerHint')).toBeEmpty();
+    await expect(phone.page.locator('#playerAnswerSummary')).toBeHidden();
+  }
+  await expect(projector.locator('#displayTimer')).toHaveText('BUZZ OPEN');
   await expect(page.locator("#hostBuzzer")).toBeVisible();
   await expect(page.locator("#buzzerStatus")).toContainText(
     "Waiting for the first buzz",
@@ -173,6 +188,11 @@ module.exports = async function buzzerBrowser({ page, browser, password }) {
     await expect(phone.page.locator("#buzzNote")).toContainText("You buzzed in");
   }
   await expect(page.locator("#buzzQueue .buzz-row")).toHaveCount(3);
+  await expect(projector.locator('.display-buzzes .buzz-name')).toHaveText(['Meera', 'Anita', 'Rahul']);
+  await expect(projector.locator('.display-buzzes .buzz-time')).toHaveCount(3);
+  await projector.reload();
+  await expect(projector.locator('#displayConnection')).toContainText('Connected');
+  await expect(projector.locator('.display-buzzes .buzz-name')).toHaveText(['Meera', 'Anita', 'Rahul']);
   await expect(page.locator("#buzzQueue .buzz-name")).toContainText([
     "Meera",
     "Anita",
@@ -202,7 +222,14 @@ module.exports = async function buzzerBrowser({ page, browser, password }) {
     path: "test-artifacts/buzzer-host-results.png",
     animations: "disabled",
   });
-  console.log("      buzzer: host awarded the second-fastest buzzer");
+  await expect(page.locator('#nextQuestion')).toBeEnabled();
+  await page.locator('#nextQuestion').click();
+  // Preserve the last-question announcement; the next press opens the question.
+  await expect(page.locator('#nextQuestion')).toHaveText(/Start last question/);
+  await page.locator('#nextQuestion').click();
+  await expect(page.locator('#hostQuestion')).toHaveText('Two plus two?');
+  console.log("      buzzer: projector queue, reconnect, reveal and next question passed");
+  await projector.close();
 
   for (const phone of phones) await phone.ctx.close();
   // Leave the host on the dashboard: the game modal would otherwise block the
