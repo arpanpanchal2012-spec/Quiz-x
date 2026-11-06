@@ -214,6 +214,8 @@ test(
           p.name = name;
           players.push(p);
         }
+        host.send("set_visual_styles", {host: "h12", projector: "p08"});
+        await host.wait("visual_styles_changed");
         host.send("next_question");
         for (const p of players) await p.wait("question_started");
         host.send("show_options");
@@ -251,6 +253,7 @@ test(
         assert.equal(resumed.game.code, code);
         assert.equal(resumed.game.status, "question");
         assert.equal(resumed.game.index, 0);
+        assert.deepEqual(resumed.game.visualStyles, {host: "h12", projector: "p08"});
         assert.equal(resumed.game.participants.length, 2);
         assert.ok(
           resumed.game.participants.every((p) => p.answered),

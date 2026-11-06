@@ -562,12 +562,18 @@ test(
           for (const type of [
             "start_question",
             "set_music",
+            "set_visual_styles",
             "submit_answer",
             "refresh_images",
           ]) {
             display.send(type, { playing: false, volume: 0, answer: 0 });
             assert.match((await display.wait("error")).message, /read-only/);
           }
+          host.send("set_visual_styles", { host: "h12", projector: "p08" });
+          const changedStyles = await display.wait("visual_styles_changed");
+          assert.deepEqual(changedStyles.visualStyles, { host: "h12", projector: "p08" });
+          host.send("set_visual_styles", { host: "h13", projector: "p08" });
+          assert.match((await host.wait("error")).message, /Invalid visual style/);
           const player = await connect();
           player.send("join_game", { code, name: "Actual test participant" });
           await player.wait("joined");

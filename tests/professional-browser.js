@@ -270,6 +270,33 @@ module.exports = async function professionalBrowser({ page, browser, errors }) {
     "complete",
     true,
   );
+  // Twenty independent host-chosen styles, with real reference thumbnails.
+  await page.locator("#themePicker summary").click();
+  await expect(page.locator("#hostStyle option")).toHaveCount(13);
+  await expect(page.locator("#projectorStyle option")).toHaveCount(9);
+  for (let i = 1; i <= 12; i++) {
+    const style = "h" + String(i).padStart(2, "0");
+    await page.locator("#hostStyle").selectOption(style);
+    await expect(page.locator("#gameModal")).toHaveAttribute("data-host-style", style);
+    await expect(page.locator("#hostStylePreview")).toHaveJSProperty("complete", true);
+    expect(await page.locator("#hostStylePreview").evaluate(el => el.naturalWidth)).toBeGreaterThan(0);
+  }
+  for (let i = 1; i <= 8; i++) {
+    const style = "p" + String(i).padStart(2, "0");
+    await page.locator("#projectorStyle").selectOption(style);
+    await expect(display.locator("body")).toHaveAttribute("data-projector-style", style);
+    await expect(page.locator("#projectorStylePreview")).toHaveJSProperty("complete", true);
+    expect(await page.locator("#projectorStylePreview").evaluate(el => el.naturalWidth)).toBeGreaterThan(0);
+  }
+  await expect(display.locator(".display-media img")).toBeVisible();
+  await page.screenshot({path: '/home/user/actual-host-design-12.png', animations: 'disabled'});
+  await display.screenshot({path: '/home/user/actual-projector-design-8.png', animations: 'disabled'});
+  await display.reload();
+  await expect(display.locator("body")).toHaveAttribute("data-projector-style", "p08");
+  await page.locator("#hostStyle").selectOption("default");
+  await page.locator("#projectorStyle").selectOption("default");
+  await expect(display.locator("body")).toHaveAttribute("data-projector-style", "default");
+  await page.locator("#themePicker summary").click();
   await expect(page.locator("#consoleNotes")).toContainText("PRIVATE NOTE");
   await expect(page.locator("#consoleNext")).toContainText(
     "NEXT PRIVATE PREVIEW",
