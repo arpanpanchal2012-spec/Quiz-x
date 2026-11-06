@@ -191,6 +191,8 @@ module.exports = async function buzzerBrowser({ page, browser, password }) {
   await expect(page.locator("#buzzQueue .buzz-row")).toHaveCount(3);
   await expect(projector.locator('.display-buzzes .buzz-name')).toHaveText(['Meera', 'Anita', 'Rahul']);
   await expect(projector.locator('.display-buzzes .buzz-time')).toHaveCount(3);
+  await projector.setViewportSize({ width: 1440, height: 960 });
+  await projector.screenshot({path: '/home/user/actual-buzzer-rc27.png', animations: 'disabled'});
   await projector.reload();
   await expect(projector.locator('#displayConnection')).toContainText('Connected');
   await expect(projector.locator('.display-buzzes .buzz-name')).toHaveText(['Meera', 'Anita', 'Rahul']);
@@ -227,6 +229,8 @@ module.exports = async function buzzerBrowser({ page, browser, password }) {
   await page.locator('#nextQuestion').click();
   // Preserve the last-question announcement; the next press opens the question.
   await expect(page.locator('#nextQuestion')).toHaveText(/Start last question/);
+  await expect(projector.locator('.round-announcement')).toContainText('Last question');
+  await projector.screenshot({path: '/home/user/actual-round-rc27.png', animations: 'disabled'});
   await page.locator('#nextQuestion').click();
   await expect(page.locator('#hostQuestion')).toHaveText('Two plus two?');
   await page.locator('#nextQuestion').click();
@@ -235,14 +239,35 @@ module.exports = async function buzzerBrowser({ page, browser, password }) {
   await expect(projector.locator('#displayCount')).not.toContainText('answered');
   const bounds = await projector.locator('#displayStage').evaluate(el => ({ client: el.clientHeight, scroll: el.scrollHeight }));
   expect(bounds.scroll).toBeLessThanOrEqual(bounds.client + 3);
-  await projector.screenshot({path: '/home/user/quizzes-actual-projector.png', animations: 'disabled'});
-  console.log("      buzzer: projector queue, reconnect, reveal, next question and stage passed");
+  await expect(projector.locator('.vote-badge')).toHaveCount(0);
+  for (const [i, phone] of phones.entries()) {
+    await phone.page.locator('#playerOptions [data-answer="' + (i === 0 ? '1' : '0') + '"]').click();
+  }
+  await page.locator('#nextQuestion').click();
+  await expect(page.locator('#nextQuestion')).toHaveText(/Finish/);
+  await page.locator('#toggleLeaderboard').click();
+  await expect(projector.locator('.display-option .vote-badge')).toHaveCount(4);
+  await expect(projector.locator('.display-option').nth(0).locator('.vote-badge')).toHaveText('2 votes · 67%');
+  await expect(projector.locator('.display-option').nth(1).locator('.vote-badge')).toHaveText('1 vote · 33%');
+  await expect(projector.locator('.display-option.display-correct')).toHaveCount(1);
+  await expect(projector.locator('.display-chart')).toHaveCount(0);
+  await expect(page.locator('#hostOptions .vote-badge')).toHaveCount(4);
+  await expect(phones[0].page.locator('#playerOptions .vote-badge')).toHaveCount(4);
+  await projector.reload();
+  await expect(projector.locator('.display-option .vote-badge')).toHaveCount(4);
+  await expect(projector.locator('.display-option').nth(0).locator('.vote-badge')).toHaveText('2 votes · 67%');
+  await projector.screenshot({path: '/home/user/actual-votes-rc27.png', animations: 'disabled'});
+  await page.locator('#nextQuestion').click();
+  await expect(projector.locator('.display-final')).toBeVisible();
+  await expect(projector.locator('.display-podium-place')).toHaveCount(3);
+  await projector.screenshot({path: '/home/user/actual-podium-rc27.png', animations: 'disabled'});
+  console.log("      buzzer: queue, vote badges, round announcement, podium and progression passed");
   await projector.close();
 
   for (const phone of phones) await phone.ctx.close();
   // Leave the host on the dashboard: the game modal would otherwise block the
   // next module, and the stored host session would restore it after a reload.
-  await page.locator("#endGame").click();
+  if (await page.locator("#endGame").isVisible()) await page.locator("#endGame").click();
   await page.evaluate(() => sessionStorage.removeItem("quizzes-host"));
   await page.goto("/");
   await expect(page.locator("#gameModal")).not.toHaveClass(/open/);
