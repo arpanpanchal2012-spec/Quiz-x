@@ -914,6 +914,15 @@ const server = http.createServer(async (req, res) => {
       });
       return fs.createReadStream(file).pipe(res);
     }
+    // Small static reference thumbnails for the host's style picker.
+    if (p.startsWith("/assets/themes/")) {
+      const name = p.slice("/assets/themes/".length);
+      if (!/^(?:h(?:0[1-9]|1[0-2])|p0[1-8])\.webp$/.test(name)) return fail("Not found", 404);
+      const file = path.join(__dirname, "assets", "themes", name);
+      if (!fs.existsSync(file)) return fail("Not found", 404);
+      res.writeHead(200, { "Content-Type": "image/webp", "Cache-Control": "public, max-age=604800", "X-Content-Type-Options": "nosniff" });
+      return fs.createReadStream(file).pipe(res);
+    }
     const files = {
       "/": "index.html",
       "/join": "index.html",
@@ -1113,6 +1122,7 @@ function state(g) {
     total: g.questions.length,
     deadline: g.deadline,
     musicState: g.musicState,
+    visualStyles: g.visualStyles || { host: "default", projector: "default" },
     leaderboardVisible: g.leaderboardVisible,
     buzzer:
       g.status === "buzzer"
@@ -1523,6 +1533,7 @@ wss.on("connection", (ws, req) => {
           created: Date.now(),
           status: "lobby",
           musicState: { playing: true, volume: 0.3 },
+          visualStyles: { host: "default", projector: "default" },
           leaderboardVisible: false,
           index: -1,
           deadline: null,
@@ -1777,6 +1788,13 @@ wss.on("connection", (ws, req) => {
           g.musicState = { playing: msg.playing, volume: msg.volume };
           broadcast(g, "music_control", { musicState: g.musicState });
           return;
+        }
+        if (msg.type === "set_visual_styles") {
+          const h = msg.host, p = msg.projector;
+          if (!(h === "default" || /^h(?:0[1-9]|1[0-2])$/.test(h)) ||
+              !(p === "default" || /^p0[1-8]$/.test(p))) fail("Invalid visual style.");
+          g.visualStyles = { host: h, projector: p };
+          return broadcast(g, "visual_styles_changed", { visualStyles: g.visualStyles });
         }
         if (msg.type === "set_leaderboard") {
           if (typeof msg.visible !== "boolean")

@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#513293" />
     <title>Quizzes · Live learning, together</title>
-    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.27" />
-    <link rel="stylesheet" href="/characters.css?v=0.9.0-rc.27" />
+    <link rel="stylesheet" href="/styles.css?v=0.9.0-rc.28" />
+    <link rel="stylesheet" href="/characters.css?v=0.9.0-rc.28" />
   </head>
   <body>
     <div class="app-shell" id="hostApp">
@@ -836,6 +836,17 @@
             <div class="eyebrow">QUIZZES · LIVE GAME SHOW</div>
             <h2 id="gameTitle">Your community, connected</h2>
             <div class="pro-host-tools">
+              <details class="theme-picker" id="themePicker">
+                <summary>Screen designs</summary>
+                <div class="theme-picker-panel">
+                  <p>Choose each screen independently. Changes apply to the live room.</p>
+                  <label>Host design<select id="hostStyle"><option value="default">Current design</option></select></label>
+                  <img id="hostStylePreview" alt="Reference sample for selected host design" hidden>
+                  <label>Projector design<select id="projectorStyle"><option value="default">Current design</option></select></label>
+                  <img id="projectorStylePreview" alt="Reference sample for selected projector design" hidden>
+                  <small>Samples are visual references. Your actual quiz image, controls and text are used in the live screen.</small>
+                </div>
+              </details>
               <button id="openProjector" class="text-btn" type="button">
                 Projector ↗</button
               ><button
@@ -1421,13 +1432,13 @@ Answer: together</pre
       </p>
       <div id="draftRecoveryList"></div>
     </dialog>
-    <script src="/qr-code.js?v=0.9.0-rc.27"></script>
-    <script src="/quiz-sound.js?v=0.9.0-rc.27"></script>
-    <script src="/characters3d.gen.js?v=0.9.0-rc.27"></script>
-    <script src="/characters.js?v=0.9.0-rc.27"></script>
-    <script src="/celebrate.js?v=0.9.0-rc.27"></script>
-    <script src="/app.js?v=0.9.0-rc.27"></script>
-    <script src="/extensions.js?v=0.9.0-rc.27"></script>
-    <script src="/professional.js?v=0.9.0-rc.27"></script>
+    <script src="/qr-code.js?v=0.9.0-rc.28"></script>
+    <script src="/quiz-sound.js?v=0.9.0-rc.28"></script>
+    <script src="/characters3d.gen.js?v=0.9.0-rc.28"></script>
+    <script src="/characters.js?v=0.9.0-rc.28"></script>
+    <script src="/celebrate.js?v=0.9.0-rc.28"></script>
+    <script src="/app.js?v=0.9.0-rc.28"></script>
+    <script src="/extensions.js?v=0.9.0-rc.28"></script>
+    <script src="/professional.js?v=0.9.0-rc.28"></script>
   </body>
 </html>

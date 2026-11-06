@@ -34,6 +34,7 @@ function serialize(g) {
     startedAt: g.startedAt || null,
     leaderboardVisible: !!g.leaderboardVisible,
     musicState: g.musicState || { playing: true, volume: 0.3 },
+    visualStyles: g.visualStyles || { host: "default", projector: "default" },
     reportId: g.reportId || null,
     hostToken: g.hostToken,
     displayToken: g.displayToken,
@@ -95,6 +96,7 @@ function restore(doc) {
     // A room saved before this step existed had its options on screen already.
     optionsVisible: doc.optionsVisible !== false,
     musicState: doc.musicState || { playing: true, volume: 0.3 },
+    visualStyles: doc.visualStyles || { host: "default", projector: "default" },
     reportId: doc.reportId || null,
     questions,
     players: new Map(

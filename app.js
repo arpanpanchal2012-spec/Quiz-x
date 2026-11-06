@@ -1553,8 +1553,36 @@ function updateHostImageStatus() {
   }
 }
 
+const hostStyleNames = ["Spotlight", "Royal Indigo", "Modern Light", "Festival", "Midnight Neon", "Studio Stage", "Image Focus 1", "Image Focus 2", "Midnight Ring", "Panorama", "Golden Spotlight", "Classic Show"];
+const projectorStyleNames = ["Spotlight", "Royal Indigo", "Clean Bright", "Midnight Neon", "Theatre", "Dark Gallery", "Full Image", "Golden Frame"];
+for (const [id, prefix, names] of [["hostStyle", "h", hostStyleNames], ["projectorStyle", "p", projectorStyleNames]]) {
+  const select = document.getElementById(id);
+  names.forEach((name, i) => select.add(new Option(`${i + 1}. ${name}`, prefix + String(i + 1).padStart(2, "0"))));
+}
+function applyVisualStyles(styles) {
+  const host = styles?.host || "default", projector = styles?.projector || "default";
+  $("#gameModal").dataset.hostStyle = host;
+  for (const [id, preview, value] of [["hostStyle", "hostStylePreview", host], ["projectorStyle", "projectorStylePreview", projector]]) {
+    const select = document.getElementById(id), image = document.getElementById(preview);
+    select.value = value;
+    image.hidden = value === "default";
+    if (!image.hidden) image.src = `/assets/themes/${value}.webp`;
+    else image.removeAttribute("src");
+  }
+}
+for (const id of ["hostStyle", "projectorStyle"]) document.getElementById(id).addEventListener("change", () => {
+  if (!game || participantMode) return;
+  const styles = { host: $("#hostStyle").value, projector: $("#projectorStyle").value };
+  if (send("set_visual_styles", styles)) applyVisualStyles(styles);
+});
+
 function handleMessage(m) {
   window.ProfessionalHost?.message(m);
+  if (m.type === "visual_styles_changed") {
+    if (game) game.visualStyles = m.visualStyles;
+    if (!participantMode) applyVisualStyles(m.visualStyles);
+    return;
+  }
   if (m.type === "host_images") {
     primeHostImages(m);
     return;
@@ -1611,6 +1639,7 @@ function handleMessage(m) {
   }
   if (["game_created", "host_resumed", "joined"].includes(m.type)) {
     game = m.game;
+    if (!participantMode) applyVisualStyles(game.visualStyles);
     liveQuestion = m.question;
     locked = !!m.answered;
     if (m.type === "joined") {
@@ -2453,9 +2482,7 @@ function renderPlayers() {
     (p) => p.answered,
   ).length;
   $("#answeredCount").textContent =
-    game.status === "question"
-      ? `${game.participants.filter((p) => p.answered).length} / ${game.participants.length} answered`
-      : `${game.participants.filter((p) => p.connected).length} connected`;
+    `${game.participants.filter((p) => p.connected).length} connected`;
   if (["lobby", "round_intro", "last_question_intro"].includes(game.status))
     renderJoinWall();
 }

@@ -9167,3 +9167,73 @@ body[data-tone="3"] { --tone: #f6c542; }
 @media (max-width: 480px) {
   #hostOptions .answer .vote-badge, #playerOptions .p-answer .vote-badge { font-size: 12px; }
 }
+
+/* Screen style picker is host-only; sample thumbnails are references, never the quiz images. */
+.theme-picker { position: relative; display: inline-block; }
+.theme-picker summary { cursor: pointer; list-style: none; color: #fff; padding: 7px 12px; border: 1px solid #ffffff50; border-radius: 8px; background: #ffffff18; font-weight: 700; }
+.theme-picker summary::-webkit-details-marker { display: none; }
+.theme-picker summary:focus-visible, .theme-picker select:focus-visible { outline: 3px solid #f6cb45; outline-offset: 2px; }
+.theme-picker-panel { position: absolute; z-index: 300; top: calc(100% + 6px); left: 0; width: min(340px, 85vw); max-height: min(75vh, 650px); overflow: auto; padding: 16px; border-radius: 14px; background: #fff; color: #24193d; box-shadow: 0 18px 45px #0009; border: 1px solid #d7c9ec; }
+.theme-picker-panel p { margin: 0 0 12px; font-size: 13px; }
+.theme-picker-panel label { display: block; margin: 10px 0 5px; color: #24193d; font-weight: 700; }
+.theme-picker-panel select { width: 100%; margin-top: 4px; padding: 9px; color: #24193d; background: #fff; border: 1px solid #8f7ba8; border-radius: 8px; }
+.theme-picker-panel img { width: 100%; max-height: 145px; object-fit: contain; background: #140d2a; border-radius: 8px; }
+.theme-picker-panel small { display: block; margin-top: 10px; color: #554b62; line-height: 1.4; }
+#gameModal.open[data-host-style]:not([data-host-style="default"]) .game-head { background: var(--theme-head); }
+#gameModal.open[data-host-style]:not([data-host-style="default"]) .game-stage { background: var(--theme-back); }
+#gameModal.open[data-host-style]:not([data-host-style="default"]) .stage-question { border-color: var(--theme-accent); box-shadow: inset 0 0 0 2px var(--theme-accent), 0 18px 40px #0d072440; }
+#gameModal.open[data-host-style]:not([data-host-style="default"]) .stage-question.has-media #hostMedia { border: 2px solid var(--theme-accent); border-radius: var(--theme-radius, 14px); box-shadow: 0 12px 32px #0d072488; }
+#gameModal.open[data-host-style]:not([data-host-style="default"]) .stage-question.has-media #hostMedia img { object-fit: contain; }
+.projector-page[data-projector-style]:not([data-projector-style="default"]) .projector-head,
+.projector-page[data-projector-style]:not([data-projector-style="default"]) .projector-footer { background: var(--theme-head); }
+.projector-page[data-projector-style]:not([data-projector-style="default"]) .projector-stage,
+.projector-page[data-projector-style]:not([data-projector-style="default"]) .projector-stage:has(.showcase-question) { background: var(--theme-back); }
+.projector-page[data-projector-style]:not([data-projector-style="default"]) .display-question.has-image .display-media { border: 2px solid var(--theme-accent); border-radius: var(--theme-radius, 14px); box-shadow: 0 12px 32px #0d072488; }
+.projector-page[data-projector-style]:not([data-projector-style="default"]) .display-question.has-image .display-media img { object-fit: contain; }
+
+#gameModal[data-host-style="h01"] { --theme-head: #241040; --theme-back: radial-gradient(ellipse at 50% 16%, #b790ff30, transparent 55%), #180b32; --theme-accent: #b790ff; --theme-radius: 18px; }
+#gameModal[data-host-style="h02"] { --theme-head: #0b1939; --theme-back: radial-gradient(ellipse at 50% 16%, #d7b65c30, transparent 55%), #0c1733; --theme-accent: #d7b65c; --theme-radius: 4px; }
+#gameModal[data-host-style="h03"] { --theme-head: #30205d; --theme-back: radial-gradient(ellipse at 50% 16%, #8570ba30, transparent 55%), #cbc4e2; --theme-accent: #8570ba; --theme-radius: 22px; }
+#gameModal[data-host-style="h04"] { --theme-head: #3b1238; --theme-back: radial-gradient(ellipse at 50% 16%, #ffb85a30, transparent 55%), #260c2c; --theme-accent: #ffb85a; --theme-radius: 20px; }
+#gameModal[data-host-style="h05"] { --theme-head: #06192c; --theme-back: radial-gradient(ellipse at 50% 16%, #57e1e830, transparent 55%), #081629; --theme-accent: #57e1e8; --theme-radius: 10px; }
+#gameModal[data-host-style="h06"] { --theme-head: #1e103c; --theme-back: radial-gradient(ellipse at 50% 16%, #e5c56930, transparent 55%), #1a0b31; --theme-accent: #e5c569; --theme-radius: 3px; }
+#gameModal[data-host-style="h07"] { --theme-head: #28163f; --theme-back: radial-gradient(ellipse at 50% 16%, #eac58b30, transparent 55%), #110d1a; --theme-accent: #eac58b; --theme-radius: 2px; }
+#gameModal[data-host-style="h08"] { --theme-head: #121529; --theme-back: radial-gradient(ellipse at 50% 16%, #afadbd30, transparent 55%), #0e101a; --theme-accent: #afadbd; --theme-radius: 16px; }
+#gameModal[data-host-style="h09"] { --theme-head: #141037; --theme-back: radial-gradient(ellipse at 50% 16%, #ffc95a30, transparent 55%), #140f30; --theme-accent: #ffc95a; --theme-radius: 999px; }
+#gameModal[data-host-style="h10"] { --theme-head: #11152d; --theme-back: radial-gradient(ellipse at 50% 16%, #b88aee30, transparent 55%), #15122b; --theme-accent: #b88aee; --theme-radius: 4px; }
+#gameModal[data-host-style="h11"] { --theme-head: #26103d; --theme-back: radial-gradient(ellipse at 50% 16%, #ffdb8930, transparent 55%), #150b29; --theme-accent: #ffdb89; --theme-radius: 14px; }
+#gameModal[data-host-style="h12"] { --theme-head: #231040; --theme-back: radial-gradient(ellipse at 50% 16%, #ffc85a30, transparent 55%), #220d44; --theme-accent: #ffc85a; --theme-radius: 24px; }
+.projector-page[data-projector-style="p01"] { --theme-head: #221040; --theme-back: radial-gradient(ellipse at 50% 16%, #c9a4ff30, transparent 55%), #190a36; --theme-accent: #c9a4ff; --theme-radius: 16px; }
+.projector-page[data-projector-style="p02"] { --theme-head: #09162d; --theme-back: radial-gradient(ellipse at 50% 16%, #e3c57230, transparent 55%), #0b1733; --theme-accent: #e3c572; --theme-radius: 4px; }
+.projector-page[data-projector-style="p03"] { --theme-head: #2a204d; --theme-back: radial-gradient(ellipse at 50% 16%, #9076c730, transparent 55%), #e6e1f1; --theme-accent: #9076c7; --theme-radius: 20px; }
+.projector-page[data-projector-style="p04"] { --theme-head: #071626; --theme-back: radial-gradient(ellipse at 50% 16%, #62e1ee30, transparent 55%), #081322; --theme-accent: #62e1ee; --theme-radius: 8px; }
+.projector-page[data-projector-style="p05"] { --theme-head: #120f18; --theme-back: radial-gradient(ellipse at 50% 16%, #e6d0a430, transparent 55%), #151014; --theme-accent: #e6d0a4; --theme-radius: 2px; }
+.projector-page[data-projector-style="p06"] { --theme-head: #11131b; --theme-back: radial-gradient(ellipse at 50% 16%, #9f9bad30, transparent 55%), #161820; --theme-accent: #9f9bad; --theme-radius: 12px; }
+.projector-page[data-projector-style="p07"] { --theme-head: #1b0f3c; --theme-back: radial-gradient(ellipse at 50% 16%, #9e7cdc30, transparent 55%), #180e31; --theme-accent: #9e7cdc; --theme-radius: 4px; }
+.projector-page[data-projector-style="p08"] { --theme-head: #1d1139; --theme-back: radial-gradient(ellipse at 50% 16%, #e7bf6330, transparent 55%), #1c1033; --theme-accent: #e7bf63; --theme-radius: 16px; }
+#gameModal.open[data-host-style="h03"] .game-stage { color: #22133f; }
+#gameModal.open[data-host-style="h03"] #hostHint, #gameModal.open[data-host-style="h03"] #hostQuestionNumber { color: #30224a; }
+.projector-page[data-projector-style="p03"] .display-meta { color: #30224a; }
+.projector-page[data-projector-style="p03"] .display-answer-line { color: #174c39; }
+@media (min-width: 1000px) and (min-height: 680px) {
+  #gameModal.open[data-host-style]:not([data-host-style="default"]) .stage-question.has-media #hostOptions { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  #gameModal.open[data-host-style]:not([data-host-style="default"]) .stage-question.has-media #hostOptions:has(.answer:nth-child(5)) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .projector-page[data-projector-style]:not([data-projector-style="default"]) .display-question.has-image .display-options { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .projector-page[data-projector-style]:not([data-projector-style="default"]) .display-question.has-image .display-options:has(.display-option:nth-child(5)) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #gameModal.open[data-host-style="h07"] .stage-question.has-media #hostQuestion,
+  #gameModal.open[data-host-style="h08"] .stage-question.has-media #hostQuestion,
+  #gameModal.open[data-host-style="h09"] .stage-question.has-media #hostQuestion,
+  #gameModal.open[data-host-style="h10"] .stage-question.has-media #hostQuestion { background: transparent; color: white; box-shadow: none; padding: 6px; }
+  .projector-page[data-projector-style="p05"] .display-question.has-image h1,
+  .projector-page[data-projector-style="p06"] .display-question.has-image h1,
+  .projector-page[data-projector-style="p07"] .display-question.has-image h1 { background: transparent; color: white; box-shadow: none; }
+  #gameModal.open[data-host-style="h12"] .stage-question.has-media #hostOptions .answer { border: 3px solid #dfd1ed; border-radius: 10px; box-shadow: 0 7px 0 #3a2558; }
+  #gameModal.open[data-host-style="h06"] .stage-question.has-media #hostMedia,
+  #gameModal.open[data-host-style="h11"] .stage-question.has-media #hostMedia,
+  .projector-page[data-projector-style="p08"] .display-question.has-image .display-media { border-width: 4px; }
+  #gameModal.open[data-host-style="h09"] .stage-question.has-media #hostMedia { border-radius: 20px; box-shadow: 0 0 35px #e7b45d66; }
+  #gameModal.open[data-host-style="h05"] .stage-question.has-media #hostMedia,
+  .projector-page[data-projector-style="p04"] .display-question.has-image .display-media { box-shadow: 0 0 32px #57e1e866; }
+}
+/* Participation totals must not expose answer counts before reveal. */
+#gameModal[data-phase="question"] .live-answer-counter { display: none !important; }

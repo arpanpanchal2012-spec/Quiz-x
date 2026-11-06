@@ -281,11 +281,18 @@
         result = m.result;
         rows = m.leaderboard || m.visibleLeaderboard || [];
         board = game.leaderboardVisible;
+        document.body.dataset.projectorStyle = game.visualStyles?.projector || "default";
         buzzes = m.buzzes || [];
         buzzOpen = m.open !== false;
         if (m.serverNow) offset = m.serverNow - Date.now();
         $("#displayConnection").textContent = "Connected · audience display";
         render();
+        return;
+      }
+      if (m.type === "visual_styles_changed") {
+        document.body.dataset.projectorStyle = m.visualStyles?.projector || "default";
+        if (game) game.visualStyles = m.visualStyles;
+        requestAnimationFrame(fit);
         return;
       }
       if (m.type === "leaderboard_control") {
