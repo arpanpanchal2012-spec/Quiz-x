@@ -9073,3 +9073,97 @@ body[data-tone="3"] { --tone: #f6c542; }
   .showcase-question .display-option.tile-3 { background: linear-gradient(#ffb719, #eb8200); color: #fff; }
   .showcase-question .display-options:has(.display-option:nth-child(5)) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* rc.27 — results on the answers themselves, after reveal only. */
+.vote-badge {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: fit-content;
+  padding: .35em .75em;
+  border: 1px solid #ffffff70;
+  border-radius: 999px;
+  background: #130b38b8;
+  color: #fff;
+  font-size: clamp(13px, 1.25vw, 20px);
+  font-weight: 800;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+#playerOptions .p-answer .vote-badge { grid-column: 1 / -1; justify-self: start; }
+#hostOptions .answer .vote-badge { margin-left: auto; }
+#hostOptions .answer.is-correct, #playerOptions .p-answer.is-correct {
+  outline: 4px solid #6df5a8;
+  outline-offset: -4px;
+}
+.projector-page.is-reveal .display-option.display-wrong { filter: none; }
+.projector-page.is-reveal .display-option.display-correct {
+  outline: 5px solid #79ffad;
+  outline-offset: -5px;
+  box-shadow: 0 0 0 3px #6df5a8, 0 0 25px #4fefa880;
+}
+.projector-page.is-reveal .display-option .vote-badge { margin-left: auto; }
+@media (min-width: 900px) and (min-height: 650px) {
+  .projector-page.is-reveal .showcase-question .display-option .vote-badge { margin: 0; }
+  .projector-page.is-reveal .showcase-question .display-mark { position: absolute; top: 12px; right: 16px; margin: 0; }
+  .projector-page.is-reveal .showcase-question .display-option { position: relative; }
+}
+
+/* Round-change card: a readable stage announcement, without a timer. */
+.projector-stage:has(.round-announcement) {
+  background: radial-gradient(ellipse at 50% 35%, #6931bc 0, #29105a 48%, #130b35 100%);
+}
+.projector-stage .round-announcement {
+  width: min(1100px, 100%);
+  margin: auto;
+  padding: clamp(28px, 7vh, 80px) 28px;
+  text-align: center;
+  background: linear-gradient(155deg, #311361d9, #160c39e8);
+  border: 2px solid #dbb45b77;
+  box-shadow: 0 0 75px #a54fff55, inset 0 0 70px #ae70ff1c;
+}
+.projector-stage .round-announcement .eyebrow {
+  color: #ffd66b;
+  letter-spacing: .2em;
+  font-size: clamp(16px, 1.6vw, 24px);
+}
+.projector-stage .round-announcement h1 {
+  margin: .25em auto;
+  font-size: clamp(38px, 6vw, 86px);
+  line-height: 1.1;
+  color: #fff;
+}
+.projector-stage .round-announcement p { font-size: clamp(17px, 2vw, 27px); color: #e3d9ff; }
+.projector-stage .round-announcement .muted { font-size: clamp(13px, 1.2vw, 18px); }
+
+/* Projector buzzer queue: names and server-measured times for every player. */
+.projector-stage .display-buzzer { max-width: 1200px; }
+.projector-stage .display-buzzer .display-buzzes ol { gap: 12px; }
+.projector-stage .display-buzzes .buzz-row {
+  padding: 18px 22px;
+  border: 1px solid #ffffff38;
+  background: linear-gradient(100deg, #472179, #2b1756);
+  box-shadow: 0 8px 22px #07021c88;
+  font-size: clamp(24px, 2.8vw, 42px);
+  line-height: 1.2;
+}
+.projector-stage .display-buzzes .buzz-row:first-child { border-color: #f9d76a; }
+.projector-stage .display-buzzes .buzz-pos { background: #f9d76a; color: #271442; width: 1.8em; height: 1.8em; font-size: .7em; }
+.projector-stage .display-buzzes .buzz-name { overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+.projector-stage .display-buzzes .buzz-time { font-size: clamp(24px, 2.6vw, 40px); color: #ffdf83; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* A richer stage for the final podium only; mid-game rankings have no faces. */
+.projector-stage:has(.display-final) {
+  background: radial-gradient(ellipse at 50% 10%, #a472254d, transparent 46%), radial-gradient(ellipse at center, #49247b, #150b35 75%);
+}
+.display-final .final-results-title { color: #fff; font-size: clamp(34px, 4vw, 60px); margin: .1em 0; }
+.display-final .display-podium-place.place-1 .display-podium-block { box-shadow: 0 10px 0 #b8860b, 0 0 42px #f8c85066; }
+.display-final .display-podium-block { border-width: 2px; }
+.display-final .display-podium-score small { font-size: .55em; }
+/* Host controls stay usable while names and timings gain the same clarity. */
+#hostBuzzer .buzz-row { padding: 12px 16px; border: 1px solid #ffffff40; }
+#hostBuzzer .buzz-name { font-size: clamp(18px, 1.6vw, 25px); overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+#hostBuzzer .buzz-time { font-size: clamp(18px, 1.5vw, 24px); font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 480px) {
+  #hostOptions .answer .vote-badge, #playerOptions .p-answer .vote-badge { font-size: 12px; }
+}

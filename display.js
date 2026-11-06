@@ -92,7 +92,7 @@
         : window.QuizzesCharacters && p.character
           ? `<span class="display-podium-figure${mood}">${crown}${window.QuizzesCharacters.render(p.character, p.accessory)}</span>`
           : "";
-      return `<div class="display-podium-place place-${rank}">${figure}<div class="display-podium-block"><span class="display-podium-badge">${rank}</span><b>${escape(p.name)}</b><span class="display-podium-score">${Number(p.score).toLocaleString()}</span></div></div>`;
+      return `<div class="display-podium-place place-${rank}">${figure}<div class="display-podium-block"><span class="display-podium-badge">${rank}</span><b>${escape(p.name)}</b><span class="display-podium-score">${Number(p.score).toLocaleString()} <small>pts</small></span></div></div>`;
     };
     const top = rows.slice(0, 3);
     const rest = rows.slice(3);
@@ -111,7 +111,7 @@
   }
   function ranking() {
     if (game.status === "ended")
-      return `<div class="display-standings display-final"><div class="eyebrow">FINAL RESULTS</div>${
+      return `<div class="display-standings display-final"><div class="eyebrow">FINAL RESULTS</div><h1 class="final-results-title">The Winners</h1>${
         rows.length ? podium(rows) : "<p>No participants yet.</p>"
       }</div>`;
     return `<div class="display-standings"><div class="eyebrow">LIVE STANDINGS</div><h1>Leaderboard</h1>${rows.length ? `<ol>${rows.map((p) => `<li><b>${Number(p.rank)}</b><span>${escape(p.name)}</span><strong>${Number(p.score).toLocaleString()} <small>pts</small></strong></li>`).join("")}</ol>` : "<p>No participants yet.</p>"}</div>`;
@@ -199,18 +199,23 @@
       const revealed = game.status === "results";
       // No instructions on the wall: the question, its picture across the full
       // width, then the answers. The room knows what to do with a phone.
-      const image = question.media && question.mediaType?.startsWith("image/");
-      const audio = question.media && !image;
-      stage.innerHTML = `<section class="display-question${image ? " has-image" : ""}${game.status === "question" && !image && !audio && ["choice", "multi", "boolean"].includes(question.type) ? " showcase-question" : ""}"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer"></b></div><h1>${escape(question.text)}</h1>${
+      const image = !revealed && question.media && question.mediaType?.startsWith("image/");
+      const audio = !revealed && question.media && !image;
+      stage.innerHTML = `<section class="display-question${image ? " has-image" : ""}${!image && !audio && ["choice", "multi", "boolean"].includes(question.type) ? " showcase-question" : ""}"><div class="display-meta"><span>${escape(question.roundLabel)}</span><span>QUESTION ${question.index + 1} / ${question.total}</span><b id="displayTimer" role="timer"></b></div><h1>${escape(question.text)}</h1>${
         image
           ? `<div class="display-media"><img loading="eager" fetchpriority="high" decoding="async" src="${escape(question.media)}" alt="Question image"></div>`
           : audio
             ? `<div class="display-media is-audio" aria-hidden="true"></div>`
             : ""
-      }${revealed ? answerColumns() : ""}<div class="display-options${fresh ? " reveal-answers" : ""}" style="--reveal-delay:${fresh ? "0.25s" : "0s"}">${(optionsReady ? question.options || [] : []).map((o, i) => {
+      }<div class="display-options${fresh ? " reveal-answers" : ""}" style="--reveal-delay:${fresh ? "0.25s" : "0s"}">${(optionsReady ? question.options || [] : []).map((o, i) => {
         const right = revealed && result?.correctIndices?.includes(i);
         const mark = revealed ? `<span class="display-mark" aria-hidden="true">${right ? "✓" : "✗"}</span>` : "";
-        return `<div class="display-option tile-${i} ${right ? "display-correct" : revealed ? "display-wrong" : ""}" style="--i:${i}"><span aria-hidden="true">${symbols[i]}</span><span class="display-option-copy">${escape(o)}</span>${mark}</div>`;
+        const stats = result?.stats || {};
+        const total = Object.values(stats).reduce((sum, n) => sum + (Number(n) || 0), 0);
+        const count = Number(stats[i]) || 0;
+        const pct = total ? Math.round(count / total * 100) : 0;
+        const badge = revealed ? `<span class="vote-badge">${count} vote${count === 1 ? "" : "s"} · ${pct}%</span>` : "";
+        return `<div class="display-option tile-${i} ${right ? "display-correct" : revealed ? "display-wrong" : ""}" style="--i:${i}"><span aria-hidden="true">${symbols[i]}</span><span class="display-option-copy">${escape(o)}</span>${mark}${badge}</div>`;
       }).join("")}</div>${
         revealed && result?.correct
           ? `<p class="display-answer-line"><span aria-hidden="true">✓</span> ${escape(result.correct)}</p>`

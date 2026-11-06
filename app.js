@@ -2339,22 +2339,18 @@ function renderResults(result) {
       mark.textContent = correct ? "✓" : "✗";
       const count = counts[index] || 0;
       const share = votes ? Math.round((count / votes) * 100) : 0;
-      // On a phone the count sits under the answer; on the big screen it is
-      // drawn as a column above the answer, the way a game show shows the room.
-      if (participantMode) {
-        tile.classList.add("has-bar");
-        const bar = document.createElement("span");
-        bar.className = "answer-bar";
-        bar.style.setProperty("--share", share + "%");
-        bar.innerHTML = `<i aria-hidden="true"${count ? "" : ' class="is-empty"'}></i><b>${count}</b>`;
-        tile.append(bar);
-      }
+      // Vote badges are revealed only after the question has closed.
+      tile.querySelectorAll(":scope > .vote-badge, :scope > .answer-bar").forEach((el) => el.remove());
+      const badge = document.createElement("span");
+      badge.className = "vote-badge";
+      badge.textContent = `${count} vote${count === 1 ? "" : "s"} · ${share}%`;
+      tile.append(badge);
       tile.setAttribute(
         "aria-label",
         `${String.fromCharCode(65 + index)} ${liveQuestion.options[index]} · ${count} of ${votes} answers · ${share}%${correct ? " · correct answer" : ""}`,
       );
     });
-    if (!participantMode) drawAnswerChart(result, counts, votes);
+    hideAnswerChart();
   }
   const summary = $(`#${prefix}AnswerSummary`);
   if (summary) {
@@ -2367,7 +2363,7 @@ function renderResults(result) {
       liveQuestion?.type === "text"
         ? `${game.participants.filter((p) => p.answered).length} of ${game.participants.length} players answered.`
         : total
-          ? `${total} answer${total === 1 ? "" : "s"} from ${game.participants.length} player${game.participants.length === 1 ? "" : "s"} — each bar is how many chose that answer.`
+          ? `${total} answer${total === 1 ? "" : "s"} from ${game.participants.length} player${game.participants.length === 1 ? "" : "s"} — percentages are shares of selections.`
           : "No one answered this one.";
     summary.hidden = false;
   }
