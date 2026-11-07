@@ -274,6 +274,27 @@ module.exports = async function professionalBrowser({ page, browser, errors }) {
   await page.locator("#themePicker summary").click();
   await expect(page.locator("#hostStyle option")).toHaveCount(13);
   await expect(page.locator("#projectorStyle option")).toHaveCount(9);
+  await page.locator("#hostStyle").selectOption("h07");
+  await expect(page.locator("#gameModal")).toHaveAttribute("data-host-style", "h07");
+  const panoramaHost = await page.locator("#hostQuestion").evaluate(el => ({ background: getComputedStyle(el).backgroundColor, padding: getComputedStyle(el.parentElement).paddingLeft }));
+  await page.locator("#hostStyle").selectOption("h12");
+  await expect(page.locator("#gameModal")).toHaveAttribute("data-host-style", "h12");
+  const framedHost = await page.locator("#hostQuestion").evaluate(el => ({ background: getComputedStyle(el).backgroundColor, padding: getComputedStyle(el.parentElement).paddingLeft }));
+  expect(panoramaHost).not.toEqual(framedHost);
+  await page.locator("#projectorStyle").selectOption("p05");
+  await expect(display.locator("body")).toHaveAttribute("data-projector-style", "p05");
+  const panoramaProjector = await display.locator(".display-question.has-image h1").evaluate(el => ({ background: getComputedStyle(el).backgroundColor, padding: getComputedStyle(el.parentElement).paddingLeft }));
+  await page.locator("#projectorStyle").selectOption("p08");
+  await expect(display.locator("body")).toHaveAttribute("data-projector-style", "p08");
+  const framedProjector = await display.locator(".display-question.has-image h1").evaluate(el => ({ background: getComputedStyle(el).backgroundColor, padding: getComputedStyle(el.parentElement).paddingLeft }));
+  expect(panoramaProjector).not.toEqual(framedProjector);
+  await page.locator("#hostStyle").selectOption("h07");
+  await page.locator("#projectorStyle").selectOption("p05");
+  await expect(display.locator("body")).toHaveAttribute("data-projector-style", "p05");
+  await page.locator("#themePicker summary").click();
+  await page.screenshot({path: '/home/user/rc29-host-panorama.png', animations: 'disabled'});
+  await display.screenshot({path: '/home/user/rc29-projector-panorama.png', animations: 'disabled'});
+  await page.locator("#themePicker summary").click();
   for (let i = 1; i <= 12; i++) {
     const style = "h" + String(i).padStart(2, "0");
     await page.locator("#hostStyle").selectOption(style);
