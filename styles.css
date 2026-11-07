@@ -9237,3 +9237,61 @@ body[data-tone="3"] { --tone: #f6c542; }
 }
 /* Participation totals must not expose answer counts before reveal. */
 #gameModal[data-phase="question"] .live-answer-counter { display: none !important; }
+
+/* rc.29: image-first layouts, not merely different background colours.
+   These rules only affect desktop question stages with an image; controls,
+   result screens, long-content scrolling and the player's phone are untouched. */
+@media (min-width: 1000px) and (min-height: 680px) {
+  /* Panorama family: wide photo, compact title, four answers in one row. */
+  #gameModal.open:is([data-host-style="h07"],[data-host-style="h08"],[data-host-style="h10"]) .stage-question.has-media {
+    gap: 4px; padding: 0 6px 6px; justify-content: stretch;
+  }
+  #gameModal.open:is([data-host-style="h07"],[data-host-style="h08"],[data-host-style="h10"]) .stage-question.has-media #hostQuestion {
+    background: transparent; color: #fff; border: 0; border-radius: 0; box-shadow: none;
+    text-align: center; font-size: clamp(32px, 3vw, 48px); padding: 2px 12px;
+  }
+  #gameModal.open:is([data-host-style="h07"],[data-host-style="h08"],[data-host-style="h10"]) .stage-question.has-media .host-media-band {
+    flex: 1 1 auto; width: 100%; margin: 0; padding: 0;
+  }
+  #gameModal.open:is([data-host-style="h07"],[data-host-style="h08"],[data-host-style="h10"]) .stage-question.has-media #hostMedia { border-radius: 3px; }
+  #gameModal.open:is([data-host-style="h07"],[data-host-style="h08"],[data-host-style="h10"]) .stage-question.has-media .live-media-row { height: 42px; }
+
+  /* Framed studio family: centred picture and a distinct bright question plate. */
+  #gameModal.open:is([data-host-style="h01"],[data-host-style="h02"],[data-host-style="h04"],[data-host-style="h06"],[data-host-style="h11"],[data-host-style="h12"]) .stage-question.has-media {
+    gap: 10px; padding: 8px clamp(12px, 3vw, 50px) 10px;
+  }
+  #gameModal.open:is([data-host-style="h01"],[data-host-style="h02"],[data-host-style="h04"],[data-host-style="h06"],[data-host-style="h11"],[data-host-style="h12"]) .stage-question.has-media #hostQuestion {
+    text-align: center; border-radius: 14px; background: #fff; color: #20133f;
+    border: 2px solid var(--theme-accent); box-shadow: 0 9px 28px #0005;
+  }
+  #gameModal.open:is([data-host-style="h01"],[data-host-style="h02"],[data-host-style="h04"],[data-host-style="h06"],[data-host-style="h11"],[data-host-style="h12"]) .stage-question.has-media #hostMedia {
+    background: #120b2d; border-width: 4px;
+  }
+  #gameModal.open:is([data-host-style="h01"],[data-host-style="h02"],[data-host-style="h04"],[data-host-style="h06"],[data-host-style="h11"],[data-host-style="h12"]) .stage-question.has-media .live-media-row { height: 46px; }
+
+  /* Neon and ring family: dark picture matte, luminous perimeter and open title. */
+  #gameModal.open:is([data-host-style="h05"],[data-host-style="h09"]) .stage-question.has-media { padding: 12px 3vw; gap: 10px; }
+  #gameModal.open:is([data-host-style="h05"],[data-host-style="h09"]) .stage-question.has-media #hostQuestion { background: transparent; color: white; text-align: center; box-shadow: none; }
+  #gameModal.open:is([data-host-style="h05"],[data-host-style="h09"]) .stage-question.has-media #hostMedia { border: 3px solid var(--theme-accent); border-radius: 18px; box-shadow: 0 0 30px var(--theme-accent); }
+  #gameModal.open[data-host-style="h03"] .stage-question.has-media { padding: 12px 3vw; border-radius: 22px; background: #f6f3ff; }
+  #gameModal.open[data-host-style="h03"] .stage-question.has-media #hostQuestion { background: #fff; color: #20133f; border: 1px solid #cfc2e5; box-shadow: 0 8px 22px #29204a22; }
+
+  /* The projector's picture takes the available height without cropping. */
+  .projector-page:is([data-projector-style="p05"],[data-projector-style="p06"],[data-projector-style="p07"]) .display-question.has-image { gap: 5px; }
+  .projector-page:is([data-projector-style="p05"],[data-projector-style="p06"],[data-projector-style="p07"]) .display-question.has-image h1 {
+    background: transparent; color: #fff; box-shadow: none; font-size: clamp(36px, 4vw, 58px); padding: 5px; margin: 0;
+  }
+  .projector-page:is([data-projector-style="p05"],[data-projector-style="p06"],[data-projector-style="p07"]) .display-question.has-image .display-media {
+    padding: 0; margin: 0; background: #090816; border-radius: 3px; border-width: 1px;
+  }
+  .projector-page:is([data-projector-style="p01"],[data-projector-style="p02"],[data-projector-style="p08"]) .display-question.has-image { padding: 0 clamp(12px, 4vw, 60px); gap: 8px; }
+  .projector-page:is([data-projector-style="p01"],[data-projector-style="p02"],[data-projector-style="p08"]) .display-question.has-image h1 {
+    background: #fff; color: #20133f; border: 2px solid var(--theme-accent); border-radius: 14px;
+  }
+  .projector-page:is([data-projector-style="p01"],[data-projector-style="p02"],[data-projector-style="p08"]) .display-question.has-image .display-media { border-width: 4px; padding: 4px; }
+  .projector-page[data-projector-style="p03"] .display-question.has-image { padding: 12px 3vw; background: #f6f3ff; border-radius: 22px; }
+  .projector-page[data-projector-style="p03"] .display-question.has-image h1 { background: #fff; color: #20133f; border: 1px solid #cfc2e5; }
+  .projector-page[data-projector-style="p04"] .display-question.has-image { padding: 8px 3vw; }
+  .projector-page[data-projector-style="p04"] .display-question.has-image h1 { background: transparent; color: white; box-shadow: none; }
+  .projector-page[data-projector-style="p04"] .display-question.has-image .display-media { border-width: 3px; box-shadow: 0 0 30px #62e1ee66; }
+}
